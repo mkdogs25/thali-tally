@@ -79,6 +79,24 @@ weight plus workout energy, with the walking already in the step count taken bac
 Needs the development build: Apple Health and Health Connect are native modules that Expo Go cannot load. Expo Go still
 runs the app and reads the phone's own step sensor.
 
+## Web app (GitHub Pages)
+
+The web version is published at **https://mkdogs25.github.io/thali-tally/** and redeploys on every push to the
+default branch (`.github/workflows/pages.yml`, about a minute, independent of the native builds).
+
+One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. Until that is switched on the
+deploy job fails with a "Pages is not enabled" style error; after enabling it, re-run the workflow.
+
+Notes:
+- It is a static single-page app served from the `/thali-tally/` sub-path, so the build sets `EXPO_BASE_URL`
+  (see `app.config.js`) and copies `index.html` to `404.html`. Pages answers unknown paths such as `/thali-tally/settings`
+  with `404.html`, which is what makes refreshes and shared deep links work. The browser console shows a 404 on those
+  loads; that is expected.
+- Data lives in the browser's own storage (SQLite compiled to WebAssembly), so it stays on each device and browser
+  and is lost if site data is cleared.
+- Steps, Apple Health, Health Connect and Strava are phone-app features and are not available on the web.
+- The downloadable web release zip is the same app built for a site root instead.
+
 ## Releases (GitHub Actions)
 
 Every push runs `.github/workflows/release.yml`: typecheck and tests first, then three builds in parallel, each
@@ -90,7 +108,7 @@ so each build installs over the last one.
 | --- | --- | --- |
 | Android | `…-android.apk` | Signed with the debug key: installs on your own phones, not uploadable to the Play Store. Includes Health Connect, so steps count all day. |
 | iPhone | `…-ios-unsigned.ipa` | **Unsigned.** An installable iPhone app needs an Apple Developer account. Re-sign it with Sideloadly or AltStore using a free Apple ID (expires after 7 days), or add signing credentials to the workflow for TestFlight. |
-| Web | `…-web.zip` | Static site; unzip and host anywhere. No step counting on the web. |
+| Web | `…-web.zip` | Static site built for a site root; unzip and host anywhere. A live copy is on GitHub Pages (above). No step counting on the web. |
 
 The iOS job runs on a macOS runner, which GitHub bills at a higher rate on private repositories. To change the
 version number, edit `version` in `package.json`.

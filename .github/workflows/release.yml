@@ -190,9 +190,11 @@ jobs:
           cat > notes.md <<EOF
           **Web** build ${BUILD} of version ${VERSION}, from \`${GITHUB_REF_NAME}\` @ \`${GITHUB_SHA::7}\`.
 
-          A static site: unzip it and host the folder on any static host (GitHub Pages, Netlify, Cloudflare
-          Pages, S3), or try it locally with \`npx serve <folder>\`. Your data is kept in the browser's own
-          storage on that device. Step counting is not available on the web.
+          The live version is at https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/ (GitHub Pages).
+
+          This zip is the same app built for a site root: unzip it and host the folder on any static host
+          (Netlify, Cloudflare Pages, S3), or try it locally with \`npx serve <folder>\`. Your data is kept in
+          the browser's own storage on that device. Step counting is not available on the web.
           EOF
           gh release delete "$TAG" --cleanup-tag --yes || true
           FLAGS=(); [ "$PRERELEASE" = "true" ] && FLAGS+=(--prerelease)

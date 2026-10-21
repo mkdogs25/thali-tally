@@ -1,0 +1,67 @@
+name: Deploy web app to GitHub Pages
+
+# Publishes the web build to https://<owner>.github.io/<repo>/ whenever the default branch changes.
+# This is separate from the release workflow so the site updates in about a minute rather than waiting
+# for the 20-30 minute Android and iPhone builds. One-time setup: Settings -> Pages -> Source: GitHub Actions.
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; the newest queued one runs next.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CI: '1'
+  EXPO_NO_TELEMETRY: '1'
+
+jobs:
+  build:
+    name: Build site
+    # Pages only deploys from the default branch (the github-pages environment enforces it).
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Export for the /<repo>/ sub-path
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+        run: npx expo export --platform web --output-dir dist
+      - name: Make deep links and refreshes work
+        run: |
+          # Pages answers unknown paths (like /<repo>/settings) with 404.html, so make that the app itself.
+          cp dist/index.html dist/404.html
+          # Stop Jekyll from dropping the _expo folder.
+          touch dist/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
