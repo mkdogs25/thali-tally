@@ -91,8 +91,9 @@ jobs:
           It is signed with the standard debug key, so it installs and updates fine on your own devices
           but cannot be uploaded to the Play Store.
 
-          This build includes Android Health Connect, so it counts steps all day. Open Health Connect and
-          make sure a step source (Google Fit, Samsung Health, ...) is recording.
+          This build includes Health Connect. In the app go to Settings → Connected apps → Health Connect to
+          count steps all day and bring in your smartwatch and fitness-app workouts (turn on "sync to Health
+          Connect" in your watch's app first). Strava can be connected there too.
           EOF
           gh release delete "$TAG" --cleanup-tag --yes || true
           FLAGS=(); [ "$PRERELEASE" = "true" ] && FLAGS+=(--prerelease)
@@ -147,6 +148,10 @@ jobs:
           your free Apple ID using Sideloadly or AltStore (apps installed this way expire after 7 days
           and must be refreshed). For TestFlight or the App Store, add Apple signing credentials and an
           EAS or Fastlane step.
+
+          Apple Health needs the HealthKit entitlement, which a sideload re-sign may or may not keep with
+          a free Apple ID. If Apple Health will not connect, that is the likely cause; a paid Apple
+          Developer account fixes it.
           EOF
           gh release delete "$TAG" --cleanup-tag --yes || true
           FLAGS=(); [ "$PRERELEASE" = "true" ] && FLAGS+=(--prerelease)

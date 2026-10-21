@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerTintColor: colors.saffronDark, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="add" options={{ title: 'Add food', presentation: 'modal' }} />
+          <Stack.Screen name="connections" options={{ title: 'Connected apps' }} />
         </Stack>
       </StepsProvider>
     </SQLiteProvider>

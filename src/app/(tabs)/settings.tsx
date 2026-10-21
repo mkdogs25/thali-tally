@@ -1,5 +1,6 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import { Alert, ScrollView, Switch, Text } from 'react-native';
 import { useSteps } from '../../components/StepsProvider';
 import { colors } from '../../components/theme';
@@ -10,14 +11,16 @@ import { StepSource } from '../../lib/steps';
 import { useFocusLoad } from '../../lib/useFocusLoad';
 
 const SOURCE_LABEL: Record<StepSource, string> = {
-  'ios-motion': 'Apple Motion & Fitness (counts all day)',
-  'health-connect': 'Android Health Connect (counts all day)',
+  'apple-health': 'Apple Health (phone, watch and apps combined)',
+  'health-connect': 'Health Connect (phone, watch and apps combined)',
+  'ios-motion': 'This iPhone’s motion sensor (counts all day, phone only)',
   live: 'Live counting while the app is open (may under-count)',
   none: 'Not available',
 };
 
 export default function SettingsScreen() {
   const db = useSQLiteContext();
+  const router = useRouter();
   const { reading, refresh } = useSteps();
   const load = useCallback(() => getReminders(db), [db]);
   const [reminders, reload] = useFocusLoad<Reminders>(load, { meals: false, weighIn: false });
@@ -35,6 +38,14 @@ export default function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <H1>Settings</H1>
+
+      <Card>
+        <H2>Connected apps</H2>
+        <Muted style={{ marginBottom: 10 }}>
+          Bring in steps, calories burned and workouts from Apple Health, Health Connect (Samsung, Garmin, Fitbit, Oura and more) and Strava.
+        </Muted>
+        <Button title="Manage connected apps" onPress={() => router.push('/connections')} />
+      </Card>
 
       <Card>
         <H2>Reminders</H2>

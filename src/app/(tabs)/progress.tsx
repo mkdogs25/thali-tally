@@ -81,7 +81,10 @@ export default function ProgressScreen() {
         <Button title="Log weight" onPress={logWeight} />
         {[...data.weights].reverse().slice(0, 6).map((w) => (
           <Row key={w.date} style={{ justifyContent: 'space-between', paddingVertical: 4 }}>
-            <Text style={{ color: colors.text }}>{formatDay(w.date)}</Text>
+            <Text style={{ color: colors.text }}>
+              {formatDay(w.date)}
+              {w.source && w.source !== 'manual' ? <Text style={{ color: colors.muted }}> · {w.source === 'apple-health' ? 'Apple Health' : 'Health Connect'}</Text> : null}
+            </Text>
             <Row>
               <Text style={{ color: colors.text, fontWeight: '700' }}>{w.kg} kg</Text>
               <Pressable

@@ -26,7 +26,11 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACTIVITY_RECOGNITION",
-        "android.permission.health.READ_STEPS"
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_WEIGHT"
       ]
     },
     "plugins": [
@@ -44,7 +48,17 @@
           "cameraPermission": "Thali Tally uses the camera to photograph your food."
         }
       ],
+      "expo-secure-store",
+      "expo-web-browser",
       "expo-notifications",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Thali Tally reads your steps, active energy, workouts and weight from Apple Health to track calories burned. It never writes to Health.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
+        }
+      ],
       "react-native-health-connect",
       [
         "expo-build-properties",

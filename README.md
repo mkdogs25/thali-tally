@@ -6,7 +6,8 @@ A vegetarian Indian calorie, protein and step tracker. Everything is stored on t
 
 - **Log food** four ways: search Indian dishes/ingredients, build a home recipe from raw ingredient weights,
   photograph the meal and pick the dish, or scan a packaged-food barcode. Quick add for anything else.
-- **Steps and calories burned** read natively from the phone (details below).
+- **Steps and calories burned** read natively from the phone, or from connected health apps (see below).
+- **Connected apps**: Apple Health, Health Connect (Android) and Strava, which together bring in smartwatches and fitness apps.
 - **Diet plan**: enter age, height, weight, activity, a goal (lose / maintain / gain), target weight and a
   time period. The app works out daily calories and protein, caps the pace at a safe rate (≤1 % of body
   weight or 1 kg per week for loss, 0.5 kg for gain, never below 1200 kcal women / 1500 kcal men) and tells
@@ -21,7 +22,9 @@ A vegetarian Indian calorie, protein and step tracker. Everything is stored on t
 | App | Expo (React Native) + TypeScript, Expo Router for navigation |
 | Local storage | `expo-sqlite` (one on-device SQLite file; no server, no account) |
 | Steps (iOS) | `expo-sensors` Pedometer → Apple Core Motion |
-| Steps (Android) | `react-native-health-connect` → Android Health Connect |
+| Steps / energy / workouts (Android) | `react-native-health-connect` → Android Health Connect |
+| Steps / energy / workouts (iOS) | `@kingstinct/react-native-healthkit` → Apple Health |
+| Strava | Strava REST API over OAuth; tokens in `expo-secure-store` |
 | Camera / barcode | `expo-image-picker`, `expo-camera` |
 | Reminders | `expo-notifications` (local) |
 | Chart | `react-native-svg` |
@@ -49,6 +52,33 @@ npx eas-cli build --profile development --platform android
 then `npx expo start --dev-client`. In Expo Go the app still works on Android but counts steps **only while it is open**
 and says so on screen.
 
+## Connected apps (watches, Apple Health, Google/Android, Strava)
+
+Open **Settings → Connected apps**. Everything is read-only and stays on the phone.
+
+| Connect | What it brings in |
+| --- | --- |
+| **Apple Health** (iPhone) | Steps, active energy, workouts, weight. Apple Watch, Garmin Connect, Fitbit, Oura, WHOOP, Withings, Polar and Strava can all write into it. |
+| **Health Connect** (Android) | Steps, active calories, exercise sessions, distance, weight. Samsung Health, Garmin Connect, Fitbit, Mi Fitness, Oura, Withings, Polar, Zepp and Wear OS watches write into it. Google Fit's API is being retired in favour of it. |
+| **Strava** | Your activities with the calories Strava worked out. |
+
+**Smartwatches** are reached through their own apps: turn on "sync to Health Connect" / "sync to Apple Health" in the
+watch's app once. There is no per-brand integration to maintain, and workouts that arrive from both a hub and Strava
+are matched by time and counted once. Fitbit's own cloud API was retired in September 2026, so Fitbit data comes in
+through those hubs.
+
+**Strava setup** (needs your own free API app, because Strava's token exchange requires a client secret and this
+app has no server): create an application at <https://www.strava.com/settings/api>, set *Authorization Callback Domain* to
+`localhost`, then paste the Client ID and Client Secret into the app. They are kept in Keychain / Keystore. A new Strava
+API app serves one athlete (you), which is all this needs.
+
+**How energy is worked out**: if a hub reports active energy, that figure (it already covers walking and every workout
+the hub knows about) is used, and only workouts from outside the hub are added on top. Otherwise it is steps × stride ×
+weight plus workout energy, with the walking already in the step count taken back off so a run is not counted twice.
+
+Needs the development build: Apple Health and Health Connect are native modules that Expo Go cannot load. Expo Go still
+runs the app and reads the phone's own step sensor.
+
 ## Releases (GitHub Actions)
 
 Every push runs `.github/workflows/release.yml`: typecheck and tests first, then three builds in parallel, each
@@ -67,8 +97,9 @@ version number, edit `version` in `package.json`.
 
 ## How accurate are the numbers?
 
-- **Steps**: iOS and Android Health Connect values come from the operating system, not from this app. On Android,
+- **Steps**: Apple Health and Health Connect values come from the operating system, not from this app. On Android,
   Health Connect only has steps if some app records them (Google Fit / Fitbit / Samsung Health / the phone's own recorder).
+  Until you connect one, iPhone uses its own motion sensor and Android counts only while the app is open.
 - **Calories burned** are estimates. Walking = steps × stride (0.415 × height for men, 0.413 for women) × weight ×
   0.5 kcal/kg/km. Resting burn = Mifflin-St Jeor BMR. Gym workouts are not counted.
 - **Food values** are per 100 g raw, transcribed from ICMR-NIN IFCT 2017 / NIN tables. Dishes are computed from

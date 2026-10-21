@@ -4,56 +4,19 @@ import { startOfDay } from './dates';
 
 /**
  * Where a step count came from, from most to least trustworthy:
- *  - 'ios-motion'      Apple's Core Motion store. Counts all day with the app closed.
- *  - 'health-connect'  Android Health Connect. Counts whatever step recorder the phone has
- *                      (Google Fit / Fitbit / Samsung Health / the phone's own recorder), de-duplicated.
- *  - 'live'            Steps counted only while this app is open (Expo Go / no Health Connect). Under-counts.
+ *  - 'apple-health'    Apple Health (connected in the app): iPhone and Apple Watch and other apps, de-duplicated.
+ *  - 'health-connect'  Android Health Connect (connected in the app): whatever step recorder the phone has, de-duplicated.
+ *  - 'ios-motion'      The iPhone's own Core Motion store. Counts all day with the app closed, phone only.
+ *  - 'live'            Steps counted only while this app is open (Android without Health Connect). Under-counts.
  *  - 'none'            No step sensor or permission denied.
  */
-export type StepSource = 'ios-motion' | 'health-connect' | 'live' | 'none';
+export type StepSource = 'apple-health' | 'health-connect' | 'ios-motion' | 'live' | 'none';
 
 export interface StepReading {
   steps: number;
   source: StepSource;
   /** Plain-language explanation shown in the UI when the reading is not fully reliable. */
   note?: string;
-}
-
-type HealthConnectModule = typeof import('react-native-health-connect');
-
-/** Loads the native Health Connect module, or null when it is not in this build (e.g. Expo Go). */
-function loadHealthConnect(): HealthConnectModule | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('react-native-health-connect') as HealthConnectModule;
-  } catch {
-    return null;
-  }
-}
-
-async function readHealthConnect(): Promise<StepReading | null> {
-  const hc = loadHealthConnect();
-  if (!hc) return null;
-  try {
-    const status = await hc.getSdkStatus();
-    if (status === hc.SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
-      return { steps: 0, source: 'none', note: 'Install or update Health Connect from the Play Store to count steps.' };
-    }
-    if (status !== hc.SdkAvailabilityStatus.SDK_AVAILABLE) return null;
-    if (!(await hc.initialize())) return null;
-
-    const granted = await hc.requestPermission([{ accessType: 'read', recordType: 'Steps' }]);
-    if (!granted.some((p) => p.recordType === 'Steps')) {
-      return { steps: 0, source: 'none', note: 'Step permission was declined. Enable it in Health Connect settings.' };
-    }
-    const result = await hc.aggregateRecord({
-      recordType: 'Steps',
-      timeRangeFilter: { operator: 'between', startTime: startOfDay().toISOString(), endTime: new Date().toISOString() },
-    });
-    return { steps: result.COUNT_TOTAL ?? 0, source: 'health-connect' };
-  } catch {
-    return null;
-  }
 }
 
 async function readIosMotion(): Promise<StepReading> {
@@ -69,18 +32,18 @@ async function readIosMotion(): Promise<StepReading> {
 }
 
 /**
- * Today's steps so far. `liveFallback` is the count accumulated by `watchLiveSteps`
- * while the app was open, used only when no all-day source is available.
+ * Today's steps from the phone's own sensor. `liveFallback` is the count accumulated by `watchLiveSteps`
+ * while the app was open, used on Android where the sensor has no all-day history. Connecting Health Connect
+ * (Connected apps) replaces this with an all-day figure.
  */
 export async function readTodaySteps(liveFallback: number): Promise<StepReading> {
   if (Platform.OS === 'ios') return readIosMotion();
   if (Platform.OS === 'android') {
-    const hc = await readHealthConnect();
-    if (hc && hc.source !== 'none') return hc;
-    const fallbackNote =
-      hc?.note ??
-      'Steps are counted only while the app is open. For all-day counting, use the development build, which reads Android Health Connect.';
-    return { steps: liveFallback, source: 'live', note: fallbackNote };
+    return {
+      steps: liveFallback,
+      source: 'live',
+      note: 'Counting only while the app is open. Connect Health Connect under Settings → Connected apps for all-day steps.',
+    };
   }
   return { steps: 0, source: 'none', note: 'Step counting is available on Android and iOS.' };
 }

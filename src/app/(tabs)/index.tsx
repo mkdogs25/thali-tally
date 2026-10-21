@@ -7,7 +7,8 @@ import { useSteps } from '../../components/StepsProvider';
 import { colors, MEAL_ICON } from '../../components/theme';
 import { Button, Card, H2, Muted, n0, n1, ProgressBar, Row } from '../../components/ui';
 import { dateKey, dayFraction, formatDay } from '../../lib/dates';
-import { deleteFoodEntry, FoodEntry, getFoodForDay, getPlan, getProfile } from '../../lib/db';
+import { deleteFoodEntry, FoodEntry, getFoodForDay, getIntegrations, getPlan, getProfile } from '../../lib/db';
+import { KIND_LABEL } from '../../lib/health/kinds';
 import { MEAL_LABEL, MEAL_TYPES } from '../../lib/foods';
 import { Plan, Profile, restingKcalSoFar, stepsToKcal, stepsToKm } from '../../lib/plan';
 import { useFocusLoad } from '../../lib/useFocusLoad';
@@ -19,12 +20,13 @@ interface TodayData {
   entries: FoodEntry[];
   profile: Profile | null;
   plan: Plan | null;
+  connected: boolean;
 }
 
 export default function TodayScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { reading, refresh: refreshSteps } = useSteps();
+  const { reading, energy, workouts, refresh: refreshSteps } = useSteps();
   const today = dateKey();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -33,10 +35,11 @@ export default function TodayScreen() {
       entries: await getFoodForDay(db, today),
       profile: await getProfile(db),
       plan: await getPlan(db),
+      connected: Object.values(await getIntegrations(db)).some((i) => i?.enabled),
     }),
     [db, today],
   );
-  const [data, reload] = useFocusLoad<TodayData>(load, { entries: [], profile: null, plan: null });
+  const [data, reload] = useFocusLoad<TodayData>(load, { entries: [], profile: null, plan: null, connected: false });
 
   const eaten = data.entries.reduce(
     (s, e) => ({ kcal: s.kcal + e.kcal, protein: s.protein + e.protein }),
@@ -47,8 +50,10 @@ export default function TodayScreen() {
 
   const km = data.profile ? stepsToKm(reading.steps, data.profile) : null;
   const stepKcal = data.profile ? stepsToKcal(reading.steps, data.profile) : null;
+  // A connected health app / workouts give a better figure than the steps-only estimate.
+  const activeKcal = energy ? energy.activeKcal : stepKcal;
   const restKcal = data.profile ? restingKcalSoFar(data.profile, dayFraction()) : null;
-  const burned = stepKcal !== null && restKcal !== null ? stepKcal + restKcal : null;
+  const burned = activeKcal !== null && restKcal !== null ? activeKcal + restKcal : null;
 
   const confirmDelete = (e: FoodEntry) =>
     Alert.alert('Remove entry?', `${e.name} (${n0(e.kcal)} kcal)`, [
@@ -123,11 +128,11 @@ export default function TodayScreen() {
         </Muted>
         {reading.note ? <Muted style={{ marginTop: 6, color: colors.saffronDark }}>{reading.note}</Muted> : null}
 
-        {burned !== null && stepKcal !== null && restKcal !== null ? (
+        {burned !== null && activeKcal !== null && restKcal !== null ? (
           <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12 }}>
             <Row style={{ justifyContent: 'space-between' }}>
-              <Text style={{ color: colors.text }}>Burned walking</Text>
-              <Text style={{ fontWeight: '700', color: colors.text }}>{n0(stepKcal)} kcal</Text>
+              <Text style={{ color: colors.text }}>{energy?.basis === 'device' ? 'Active (from your watch/phone)' : energy ? 'Active (steps + workouts)' : 'Burned walking'}</Text>
+              <Text style={{ fontWeight: '700', color: colors.text }}>{n0(activeKcal)} kcal</Text>
             </Row>
             <Row style={{ justifyContent: 'space-between', marginTop: 4 }}>
               <Text style={{ color: colors.text }}>Resting so far</Text>
@@ -142,14 +147,42 @@ export default function TodayScreen() {
               <Text style={{ fontWeight: '800', color: colors.text }}>{n0(eaten.kcal - burned)} kcal</Text>
             </Row>
             <Muted style={{ marginTop: 8 }}>
-              Estimates: walking uses your height and weight; resting uses the Mifflin-St Jeor formula. Workouts other than walking are not
-              included.
+              {energy?.basis === 'device'
+                ? 'Active energy is measured by your connected health app. Resting uses the Mifflin-St Jeor formula.'
+                : 'Estimates: walking uses your height and weight, workouts use the energy your apps report, and resting uses the Mifflin-St Jeor formula.'}
             </Muted>
           </View>
         ) : (
           <Muted style={{ marginTop: 8 }}>Add your details on the Plan tab to estimate calories burned.</Muted>
         )}
       </Card>
+
+      {workouts.length > 0 ? (
+        <Card>
+          <H2>Workouts today</H2>
+          {workouts.map((w) => (
+            <Row key={w.id} style={{ justifyContent: 'space-between', paddingVertical: 5 }}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={{ color: colors.text, fontWeight: '600' }}>{w.name === KIND_LABEL[w.kind] ? w.name : `${w.name} · ${KIND_LABEL[w.kind]}`}</Text>
+                <Muted>
+                  {w.app} · {Math.max(1, Math.round((w.endMs - w.startMs) / 60_000))} min
+                  {w.distanceM ? ` · ${n1(w.distanceM / 1000)} km` : ''}
+                </Muted>
+              </View>
+              <Text style={{ color: colors.green, fontWeight: '700' }}>{w.kcal !== null ? `${n0(w.kcal)} kcal` : '–'}</Text>
+            </Row>
+          ))}
+        </Card>
+      ) : null}
+
+      {!data.connected ? (
+        <Card>
+          <H2>Bring in your watch and fitness apps</H2>
+          <Muted>Connect Apple Health, Health Connect or Strava for all-day steps, measured calories burned and your workouts.</Muted>
+          <View style={{ height: 10 }} />
+          <Button title="Connect apps" kind="secondary" onPress={() => router.push('/connections')} />
+        </Card>
+      ) : null}
 
       <Button title="＋ Add food" onPress={() => router.push('/add')} />
 
