@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { confirmAction } from '../../lib/dialogs';
 import { Text, TextInput } from '../Text';
 import { deleteRecipe, FoodSource, getRecipes, SavedRecipe } from '../../lib/db';
 import {
@@ -136,17 +137,16 @@ export function SearchFood({ source, onLog }: { source: FoodSource; onLog: LogFn
           {myRecipes.map((r) => {
             const n = scale(partsNutrition(r.parts), 1 / r.servings);
             return row(`r${r.id}`, r.name, 'per serving · hold to delete', n.kcal, n.protein, { kind: 'recipe', recipe: r }, () =>
-              Alert.alert('Delete recipe?', r.name, [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: async () => {
-                    await deleteRecipe(db, r.id);
-                    await reloadRecipes();
-                  },
+              confirmAction({
+                title: 'Delete recipe?',
+                message: r.name,
+                confirmLabel: 'Delete',
+                destructive: true,
+                onConfirm: async () => {
+                  await deleteRecipe(db, r.id);
+                  await reloadRecipes();
                 },
-              ]),
+              }),
             );
           })}
         </>

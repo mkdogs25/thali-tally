@@ -104,8 +104,8 @@ test('meal suggestions get close to calorie and protein targets', () => {
     assert.equal(day.meals.length, 4);
     assert.ok(Math.abs(day.total.kcal - kcal) / kcal < 0.2, `kcal ${day.total.kcal.toFixed(0)} vs ${kcal}`);
   }
-  const a = suggestDay(1800, 80, 0).meals.map((m) => m.items.map((i) => i.dishId).join());
-  const b = suggestDay(1800, 80, 1).meals.map((m) => m.items.map((i) => i.dishId).join());
+  const a = suggestDay(1800, 80, 0).meals.map((m) => m.items.map((i) => i.id).join());
+  const b = suggestDay(1800, 80, 1).meals.map((m) => m.items.map((i) => i.id).join());
   assert.notDeepEqual(a, b);
 });
 
@@ -113,4 +113,34 @@ test('date helpers', () => {
   assert.equal(addDays('2026-02-28', 1), '2026-03-01');
   assert.equal(daysBetween('2026-01-01', '2026-01-31'), 30);
   assert.deepEqual(lastNDays(3, '2026-03-01'), ['2026-02-27', '2026-02-28', '2026-03-01']);
+});
+
+// --- protein targets -------------------------------------------------------------------
+
+import { PROTEIN_G_PER_KG, proteinTarget } from '../src/lib/plan';
+
+test('protein stays within 0.8-1.0 g per kg of body weight for every activity level', () => {
+  for (const g of Object.values(PROTEIN_G_PER_KG)) assert.ok(g >= 0.8 && g <= 1.0);
+  assert.equal(proteinTarget(70, 'sedentary', 2000), 56);
+  assert.equal(proteinTarget(70, 'moderate', 2000), 63);
+  assert.equal(proteinTarget(70, 'very', 2500), 70);
+});
+
+test('protein never exceeds 35 % of calories', () => {
+  assert.equal(proteinTarget(100, 'very', 1000), Math.round((1000 * 0.35) / 4));
+});
+
+test('plans use 0.9 g/kg for moderate exercise, and weight-loss plans use the target weight', () => {
+  const moderate: Profile = { ...man, activity: 'moderate' };
+  const maintain = buildPlan({ profile: moderate, goal: 'maintain', targetWeightKg: 80, weeks: 4, startDate: 'x' });
+  assert.ok(maintain.ok);
+  if (maintain.ok) assert.equal(maintain.plan.proteinG, Math.round(0.9 * 80));
+  const lose = buildPlan({ profile: moderate, goal: 'lose', targetWeightKg: 74, weeks: 12, startDate: 'x' });
+  assert.ok(lose.ok);
+  if (lose.ok) assert.equal(lose.plan.proteinG, Math.round(0.9 * 74), 'based on the 74 kg goal, not 80 kg now');
+  const gain = buildPlan({ profile: moderate, goal: 'gain', targetWeightKg: 86, weeks: 20, startDate: 'x' });
+  assert.ok(gain.ok);
+  if (gain.ok) assert.equal(gain.plan.proteinG, Math.round(0.9 * 80), 'gaining uses current weight, not the heavier goal');
+  // The old targets (1.1 / 1.4 / 1.6 g/kg) would have been 88, 112 and 128 g for 80 kg.
+  for (const r of [maintain, lose, gain]) if (r.ok) assert.ok(r.plan.proteinG <= 80);
 });

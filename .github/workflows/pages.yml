@@ -22,6 +22,10 @@ concurrency:
 env:
   CI: '1'
   EXPO_NO_TELEMETRY: '1'
+  # Optional cloud sync. Set these as repository *variables* (Settings > Secrets and variables > Actions > Variables).
+  # They are the Supabase project's public URL and public (anon) key; leave them unset for a local-only build.
+  EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
 
 jobs:
   build:

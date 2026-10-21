@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { Text } from '../../components/Text';
-import { colors, SERIF } from '../../components/theme';
+import { colors, FONT } from '../../components/theme';
 
 const icon = (glyph: string) => () => <Text style={{ fontSize: 18 }}>{glyph}</Text>;
 
@@ -12,7 +12,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.accentDark,
         tabBarInactiveTintColor: colors.muted,
         // flexShrink: 0 stops the navigator squeezing the label (which clips at its own box) so descenders survive.
-        tabBarLabelStyle: { fontFamily: SERIF, fontSize: 12, lineHeight: 16, flexShrink: 0 },
+        tabBarLabelStyle: { fontFamily: FONT.regular, fontSize: 12, lineHeight: 16, flexShrink: 0 },
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.line,
@@ -21,7 +21,7 @@ export default function TabsLayout() {
           ...(Platform.OS === 'web' ? { height: 68, paddingTop: 6, paddingBottom: 8 } : null),
         },
         headerStyle: { backgroundColor: colors.bg },
-        headerTitleStyle: { fontFamily: SERIF, color: colors.text, fontWeight: '700' },
+        headerTitleStyle: { fontFamily: FONT.bold, color: colors.text },
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.bg },
       }}

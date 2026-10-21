@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Image, View } from 'react-native';
+import { Image, View } from 'react-native';
+import { notify } from '../../lib/dialogs';
 import { classifierAvailable, classifyFood, Suggestion } from '../../lib/classifier';
 import { DISH_BY_ID } from '../../lib/foods';
 import { colors } from '../theme';
@@ -27,7 +28,7 @@ export function PhotoLog({ onLog }: { onLog: LogFn }) {
 
   const takePhoto = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return Alert.alert('Camera permission needed', 'Allow camera access in your phone settings to photograph meals.');
+    if (!perm.granted) return notify('Camera permission needed', 'Allow camera access in your phone settings to photograph meals.');
     await handle(await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6 }));
   };
 

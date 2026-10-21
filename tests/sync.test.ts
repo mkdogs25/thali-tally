@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { addFoodEntry, getFoodForDay, getIntegrations, getStepDays, getWeights, getWorkouts, importWeight, migrate, saveIntegrations, saveWeight } from '../src/lib/db';
+import { addFoodEntry, deleteFoodEntry, getDailyTotals, getFoodForDay, getIntegrations, getStepDays, getWeights, getWorkouts, importWeight, migrate, saveIntegrations, saveWeight } from '../src/lib/db';
 import type { HealthSource, SourceDay, SourceId, Workout } from '../src/lib/health/types';
 import { syncHealth } from '../src/lib/health/sync';
 import type { Profile } from '../src/lib/plan';
@@ -38,23 +38,54 @@ async function setup(enabled: SourceId[]) {
 
 const opts = { days: [YESTERDAY, TODAY], today: TODAY, profile, baseSteps: 4000 };
 
-test('a v1 database upgrades to v2 without losing data', async () => {
+test('a v1 database upgrades to the latest schema without losing data', async () => {
   const db = testDb();
   await migrate(db, 1);
-  await addFoodEntry(db, { date: TODAY, meal: 'lunch', name: 'Dal', kcal: 200, protein: 12, carbs: 30, fat: 4, source: 'dish' });
-  await saveWeight(db, YESTERDAY, 80);
+  // Rows exactly as a v1 install wrote them (no uid / updated_at / dirty columns yet).
+  await db.runAsync(
+    `INSERT INTO food_log (date, meal, name, qty, kcal, protein, carbs, fat, source, created_at)
+     VALUES (?, 'lunch', 'Dal', NULL, 200, 12, 30, 4, 'dish', 1700000000000)`,
+    TODAY,
+  );
+  await db.runAsync('INSERT INTO weight_log (date, kg) VALUES (?, 80)', YESTERDAY);
   await db.runAsync('INSERT INTO step_days (date, steps) VALUES (?, ?)', TODAY, 5000);
+  await db.runAsync("INSERT INTO recipes (name, servings, ingredients, created_at) VALUES ('Khichdi', 4, '[]', 1700000000000)");
+  await db.runAsync("INSERT INTO kv (key, value) VALUES ('profile', '{}')");
 
   await migrate(db);
 
-  assert.equal((await getFoodForDay(db, TODAY)).length, 1);
+  const food = await getFoodForDay(db, TODAY);
+  assert.equal(food.length, 1, 'food survives');
+  assert.match((food[0] as unknown as { uid: string }).uid, /^[0-9a-f]{32}$/, 'gets a unique id');
+  assert.equal((food[0] as unknown as { updated_at: number }).updated_at, 1700000000000, 'updated_at taken from created_at');
+  assert.equal((food[0] as unknown as { dirty: number }).dirty, 0, 'existing rows start clean');
   assert.equal((await getWeights(db))[0].source, 'manual', 'existing weights count as manual');
+  const recipes = await db.getAllAsync<{ uid: string }>('SELECT uid FROM recipes');
+  assert.match(recipes[0].uid, /^[0-9a-f]{32}$/);
   const steps = await getStepDays(db, TODAY, TODAY);
   assert.equal(steps[0].steps, 5000);
   assert.equal(steps[0].active_kcal, null);
   assert.deepEqual(await getWorkouts(db, TODAY, TODAY), []);
-  assert.equal((await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version'))?.user_version, 2);
+  assert.equal((await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version'))?.user_version, 3);
   await migrate(db); // running again changes nothing
+  assert.equal((await getFoodForDay(db, TODAY)).length, 1);
+
+  // Two rows migrated in one go must not share a uid.
+  await db.runAsync("INSERT INTO recipes (uid, name, servings, ingredients, created_at) VALUES ('x', 'A', 1, '[]', 1)");
+  assert.equal(new Set((await db.getAllAsync<{ uid: string }>('SELECT uid FROM recipes')).map((r) => r.uid)).size, 2);
+});
+
+test('deleting a food entry is a soft delete that hides it and marks it for sync', async () => {
+  const db = await setup([]);
+  await addFoodEntry(db, { date: TODAY, meal: 'lunch', name: 'Dal', kcal: 200, protein: 12, carbs: 30, fat: 4, source: 'dish' });
+  const [entry] = await getFoodForDay(db, TODAY);
+  assert.equal((entry as unknown as { dirty: number }).dirty, 1, 'new entries are waiting to sync');
+  await deleteFoodEntry(db, entry.id);
+  assert.equal((await getFoodForDay(db, TODAY)).length, 0);
+  const raw = await db.getFirstAsync<{ deleted: number; dirty: number }>('SELECT deleted, dirty FROM food_log WHERE id = ?', entry.id);
+  assert.equal(raw?.deleted, 1, 'the tombstone stays so other devices learn of the delete');
+  assert.equal(raw?.dirty, 1);
+  assert.deepEqual(await getDailyTotals(db, TODAY, TODAY), [], 'deleted food is not counted');
 });
 
 test('nothing connected: nothing is read or stored', async () => {

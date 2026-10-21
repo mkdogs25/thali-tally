@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { notify } from '../../lib/dialogs';
 import { Text } from '../../components/Text';
 import { colors } from '../../components/theme';
 import { Button, Card, Field, H1, H2, Muted, n0, n1, parseNum, Row } from '../../components/ui';
@@ -8,6 +9,7 @@ import { Point, WeightChart } from '../../components/WeightChart';
 import { addDays, dateKey, daysBetween, formatDay, lastNDays } from '../../lib/dates';
 import { DayTotals, deleteWeight, getDailyTotals, getPlan, getStepDays, getWeights, saveWeight, WeightEntry } from '../../lib/db';
 import { expectedWeight, Plan } from '../../lib/plan';
+import { useAccount } from '../../components/AccountProvider';
 import { useFocusLoad } from '../../lib/useFocusLoad';
 
 interface ProgressData {
@@ -19,6 +21,7 @@ interface ProgressData {
 
 export default function ProgressScreen() {
   const db = useSQLiteContext();
+  const { version } = useAccount();
   const today = dateKey();
   const days = lastNDays(7, today);
   const [input, setInput] = useState('');
@@ -33,11 +36,11 @@ export default function ProgressScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [db, today],
   );
-  const [data, reload] = useFocusLoad<ProgressData>(load, { weights: [], plan: null, totals: [], steps: [] });
+  const [data, reload] = useFocusLoad<ProgressData>(load, { weights: [], plan: null, totals: [], steps: [] }, version);
 
   const logWeight = async () => {
     const kg = parseNum(input);
-    if (!(kg > 20 && kg < 400)) return Alert.alert('Check the number', 'Enter your weight in kilograms, e.g. 68.5');
+    if (!(kg > 20 && kg < 400)) return notify('Check the number', 'Enter your weight in kilograms, e.g. 68.5');
     await saveWeight(db, today, kg);
     setInput('');
     await reload();
@@ -101,7 +104,7 @@ export default function ProgressScreen() {
                   await reload();
                 }}
               >
-                <Text style={{ color: colors.muted }}>✕</Text>
+                <Text style={{ color: colors.muted }}>×</Text>
               </Pressable>
             </Row>
           </Row>

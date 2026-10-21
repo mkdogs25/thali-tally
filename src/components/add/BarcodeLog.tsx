@@ -55,7 +55,7 @@ export function BarcodeLog({ onLog }: { onLog: LogFn }) {
       <Card>
         <H2>{product.name}</H2>
         {product.diet === 'non-veg' ? (
-          <Text style={{ color: colors.red, fontWeight: '700', marginBottom: 8 }}>⚠ Listed as non-vegetarian</Text>
+          <Text style={{ color: colors.red, fontWeight: '700', marginBottom: 8 }}>Listed as non-vegetarian</Text>
         ) : product.diet === 'unknown' ? (
           <Muted style={{ marginBottom: 8 }}>Vegetarian status unknown — check the label.</Muted>
         ) : null}

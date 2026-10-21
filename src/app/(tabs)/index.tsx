@@ -1,18 +1,21 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { confirmAction } from '../../lib/dialogs';
 import { Text } from '../../components/Text';
 import { useState } from 'react';
+import { useAccount } from '../../components/AccountProvider';
 import { useSteps } from '../../components/StepsProvider';
 import { colors, MEAL_ICON } from '../../components/theme';
 import { Button, Card, H2, Muted, n0, n1, ProgressBar, Row } from '../../components/ui';
 import { dateKey, dayFraction, formatDay } from '../../lib/dates';
-import { deleteFoodEntry, FoodEntry, getFoodForDay, getIntegrations, getPlan, getProfile } from '../../lib/db';
+import { deleteFoodEntry, FoodEntry, getFoodForDay, getIntegrations, getPlan, getProfile, getWorkoutPlan } from '../../lib/db';
 import { KIND_LABEL } from '../../lib/health/kinds';
 import { MEAL_LABEL, MEAL_TYPES } from '../../lib/foods';
 import { Plan, Profile, restingKcalSoFar, stepsToKcal, stepsToKm } from '../../lib/plan';
 import { useFocusLoad } from '../../lib/useFocusLoad';
+import { sessionFor, WorkoutPlan } from '../../lib/workout';
 
 const DEFAULT_KCAL = 2000;
 const DEFAULT_PROTEIN = 60;
@@ -22,12 +25,14 @@ interface TodayData {
   profile: Profile | null;
   plan: Plan | null;
   connected: boolean;
+  workout: WorkoutPlan | null;
 }
 
 export default function TodayScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { reading, energy, workouts, refresh: refreshSteps } = useSteps();
+  const { version } = useAccount();
   const today = dateKey();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -37,10 +42,11 @@ export default function TodayScreen() {
       profile: await getProfile(db),
       plan: await getPlan(db),
       connected: Object.values(await getIntegrations(db)).some((i) => i?.enabled),
+      workout: await getWorkoutPlan(db),
     }),
     [db, today],
   );
-  const [data, reload] = useFocusLoad<TodayData>(load, { entries: [], profile: null, plan: null, connected: false });
+  const [data, reload] = useFocusLoad<TodayData>(load, { entries: [], profile: null, plan: null, connected: false, workout: null }, version);
 
   const eaten = data.entries.reduce(
     (s, e) => ({ kcal: s.kcal + e.kcal, protein: s.protein + e.protein }),
@@ -57,17 +63,16 @@ export default function TodayScreen() {
   const burned = activeKcal !== null && restKcal !== null ? activeKcal + restKcal : null;
 
   const confirmDelete = (e: FoodEntry) =>
-    Alert.alert('Remove entry?', `${e.name} (${n0(e.kcal)} kcal)`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteFoodEntry(db, e.id);
-          await reload();
-        },
+    confirmAction({
+      title: 'Remove entry?',
+      message: `${e.name} (${n0(e.kcal)} kcal)`,
+      confirmLabel: 'Remove',
+      destructive: true,
+      onConfirm: async () => {
+        await deleteFoodEntry(db, e.id);
+        await reload();
       },
-    ]);
+    });
 
   return (
     <ScrollView
@@ -158,6 +163,26 @@ export default function TodayScreen() {
         )}
       </Card>
 
+      {data.workout ? (
+        <Card>
+          <H2>Today’s workout</H2>
+          {(() => {
+            const s = sessionFor(data.workout);
+            return s.kind === 'rest' ? (
+              <Muted>Rest day. A relaxed walk or some stretching is welcome, but not required.</Muted>
+            ) : (
+              <>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 17 }}>{s.title}</Text>
+                <Muted style={{ marginBottom: 8 }}>
+                  {s.minutes} min · about {n0(s.kcal)} kcal{s.steps ? ` · ${n0(s.steps)} steps` : ''}
+                </Muted>
+                <Button title="See the exercises" kind="secondary" onPress={() => router.push('/plan')} />
+              </>
+            );
+          })()}
+        </Card>
+      ) : null}
+
       {workouts.length > 0 ? (
         <Card>
           <H2>Workouts today</H2>
@@ -185,7 +210,7 @@ export default function TodayScreen() {
         </Card>
       ) : null}
 
-      <Button title="＋ Add food" onPress={() => router.push('/add')} />
+      <Button title="+ Add food" onPress={() => router.push('/add')} />
 
       {MEAL_TYPES.map((meal) => {
         const items = data.entries.filter((e) => e.meal === meal);
@@ -208,7 +233,7 @@ export default function TodayScreen() {
                   </View>
                   <Text style={{ color: colors.text, fontWeight: '700' }}>{n0(e.kcal)}</Text>
                   <Pressable onPress={() => confirmDelete(e)} hitSlop={10} style={{ paddingLeft: 12 }} accessibilityLabel={`Remove ${e.name}`}>
-                    <Text style={{ color: colors.muted, fontSize: 16 }}>✕</Text>
+                    <Text style={{ color: colors.muted, fontSize: 16 }}>×</Text>
                   </Pressable>
                 </Row>
               </Pressable>

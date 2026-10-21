@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
+import { confirmAction } from '../lib/dialogs';
 import { Text } from '../components/Text';
 import { useSteps } from '../components/StepsProvider';
 import { colors } from '../components/theme';
@@ -79,23 +80,22 @@ export default function ConnectionsScreen() {
   };
 
   const disconnect = (s: HealthSource) =>
-    Alert.alert(`Disconnect ${s.label}?`, 'Its workouts will stop being counted. Data already imported stays until you erase it.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Disconnect',
-        style: 'destructive',
-        onPress: async () => {
-          await s.disconnect();
-          await setEnabled(s.id, { enabled: false });
-        },
+    confirmAction({
+      title: `Disconnect ${s.label}?`,
+      message: 'Its workouts will stop being counted. Data already imported stays until you erase it.',
+      confirmLabel: 'Disconnect',
+      destructive: true,
+      onConfirm: async () => {
+        await s.disconnect();
+        await setEnabled(s.id, { enabled: false });
       },
-    ]);
+    });
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <Muted style={{ marginBottom: 12 }}>
-        Connect a health app and your steps, calories burned and workouts flow in automatically. Everything is read-only, kept on this phone, and
-        never uploaded anywhere.
+        Connect a health app and your steps, calories burned and workouts flow in automatically. Everything is read-only, and your steps and workouts
+        are never uploaded.
       </Muted>
 
       {sources.length === 0 ? <Muted style={{ marginBottom: 12 }}>Connected apps work in the Android and iPhone apps, not in the browser.</Muted> : null}
@@ -147,7 +147,7 @@ export default function ConnectionsScreen() {
             </View>
             {s.id === 'apple-health' && connected ? (
               <Muted>
-                iOS never tells an app which Health permissions were allowed. If nothing appears, check Settings → Health → Data Access & Devices → Thali Tally.
+                iOS never tells an app which Health permissions were allowed. If nothing appears, check Settings › Health › Data Access & Devices › Thali Tally.
               </Muted>
             ) : null}
           </Card>
@@ -159,7 +159,7 @@ export default function ConnectionsScreen() {
         <Muted>
           Most watches don’t talk to apps like this directly. They sync to their own app, and that app writes into your phone’s health hub, which this
           app reads:{'\n\n'}
-          Watch → its app (Garmin Connect, Samsung Health, Fitbit, Mi Fitness, Zepp, Oura, Polar Flow, Apple Watch…) → Apple Health / Health Connect →
+          Watch › its app (Garmin Connect, Samsung Health, Fitbit, Mi Fitness, Zepp, Oura, Polar Flow, Apple Watch…) › Apple Health / Health Connect ›
           Thali Tally.{'\n\n'}
           So turn on “sync to Health Connect” or “sync to Apple Health” inside your watch’s app once, and it works from then on. Workouts that appear
           in both a hub and Strava are counted once.

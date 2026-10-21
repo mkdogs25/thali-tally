@@ -66,9 +66,25 @@ export interface Plan extends PlanInput {
 
 export type PlanResult = { ok: true; plan: Plan } | { ok: false; error: string };
 
-export function proteinTarget(weightKg: number, goal: Goal, dailyKcal: number): number {
-  const perKg = goal === 'lose' ? 1.4 : goal === 'gain' ? 1.6 : 1.1;
-  const grams = Math.min(perKg * weightKg, 2 * weightKg);
+/**
+ * Grams of protein per kg of body weight, by activity. Deliberately kept within 0.8-1.0 g/kg: 0.8 is the
+ * everyday recommendation (ICMR-NIN gives about 0.83), and 1.0 is the ceiling for someone training hard.
+ * Moderate exercise sits in the middle. During weight loss a little more can help keep muscle, so if you
+ * lift seriously, discuss going higher with a dietitian.
+ */
+export const PROTEIN_G_PER_KG: Record<ActivityLevel, number> = {
+  sedentary: 0.8,
+  light: 0.8,
+  moderate: 0.9,
+  very: 1.0,
+};
+
+/**
+ * Daily protein target in grams. When losing weight it is worked out on the target weight (the body you are
+ * building towards) rather than the current one, so a heavier starting weight does not inflate it.
+ */
+export function proteinTarget(weightKg: number, activity: ActivityLevel, dailyKcal: number): number {
+  const grams = PROTEIN_G_PER_KG[activity] * weightKg;
   // Protein should never be more than 35 % of energy.
   return Math.round(Math.min(grams, (dailyKcal * 0.35) / 4));
 }
@@ -92,7 +108,7 @@ export function buildPlan(input: PlanInput): PlanResult {
         bmr: baseBmr,
         tdee: baseTdee,
         dailyKcal,
-        proteinG: proteinTarget(profile.weightKg, goal, dailyKcal),
+        proteinG: proteinTarget(profile.weightKg, profile.activity, dailyKcal),
         weeklyChangeKg: 0,
         effectiveWeeks: weeks,
         adjusted: false,
@@ -145,7 +161,7 @@ export function buildPlan(input: PlanInput): PlanResult {
       bmr: baseBmr,
       tdee: baseTdee,
       dailyKcal,
-      proteinG: proteinTarget(profile.weightKg, goal, dailyKcal),
+      proteinG: proteinTarget(goal === 'lose' ? Math.min(profile.weightKg, targetWeightKg) : profile.weightKg, profile.activity, dailyKcal),
       weeklyChangeKg: sign * weekly,
       effectiveWeeks,
       adjusted,

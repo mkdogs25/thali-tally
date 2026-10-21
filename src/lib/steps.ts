@@ -42,7 +42,7 @@ export async function readTodaySteps(liveFallback: number): Promise<StepReading>
     return {
       steps: liveFallback,
       source: 'live',
-      note: 'Counting only while the app is open. Connect Health Connect under Settings → Connected apps for all-day steps.',
+      note: 'Counting only while the app is open. Connect Health Connect under Settings › Connected apps for all-day steps.',
     };
   }
   return { steps: 0, source: 'none', note: 'Step counting is available on Android and iOS.' };

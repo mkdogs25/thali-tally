@@ -8,6 +8,9 @@ A vegetarian Indian calorie, protein and step tracker. Everything is stored on t
   photograph the meal and pick the dish, or scan a packaged-food barcode. Quick add for anything else.
 - **Steps and calories burned** read natively from the phone, or from connected health apps (see below).
 - **Connected apps**: Apple Health, Health Connect (Android) and Strava, which together bring in smartwatches and fitness apps.
+- **Regular foods**: tell the app what you actually eat or cook (built-in dishes or your own saved recipes) and which meals they are for; the sample day of meals is built from them.
+- **Workout plan**: say which activities you like (strength, walking, running, cycling, swimming, yoga, interval circuits), how many days, how long, what equipment you have and your experience, and it builds a week with exercises, sets and reps, step targets and calorie estimates. Today's session shows on the Today screen.
+- **Optional account** with cloud sync between your phone and the web (see *Cloud sync* below).
 - **Diet plan**: enter age, height, weight, activity, a goal (lose / maintain / gain), target weight and a
   time period. The app works out daily calories and protein, caps the pace at a safe rate (≤1 % of body
   weight or 1 kg per week for loss, 0.5 kg for gain, never below 1200 kcal women / 1500 kcal men) and tells
@@ -28,6 +31,8 @@ A vegetarian Indian calorie, protein and step tracker. Everything is stored on t
 | Camera / barcode | `expo-image-picker`, `expo-camera` |
 | Reminders | `expo-notifications` (local) |
 | Chart | `react-native-svg` |
+| Typeface | [Libron](https://github.com/nicoverbruggen/libron) (bundled, SIL OFL 1.1) |
+| Account and sync (optional) | Supabase (Postgres + email sign-in) via `@supabase/supabase-js`; the phone's SQLite stays the source of truth |
 | Web | `react-native-web`; SQLite runs in the browser via WebAssembly (`metro.config.js` registers `.wasm`) |
 | Food data | Bundled in `src/lib/foods.ts` (no network needed) |
 
@@ -51,6 +56,38 @@ npx eas-cli build --profile development --platform android
 
 then `npx expo start --dev-client`. In Expo Go the app still works on Android but counts steps **only while it is open**
 and says so on screen.
+
+## Cloud sync (optional account)
+
+Without an account the app is completely local. With one, your food log, weights, recipes, profile, diet plan, regular
+foods and workout plan are mirrored to a server and kept in step across your phone and the web. Steps, workouts, calories
+burned and connected-app sign-ins always stay on each device.
+
+How it behaves: the phone's database is still the source of truth and works offline. Changes are uploaded a few seconds
+after you make them, when the app returns to the foreground, and every five minutes. If two devices edit the same thing,
+the later edit wins. Deletes reach other devices. If you sign in as a different account on a phone that already holds
+someone else's data, the app asks before anything is replaced; nothing is merged silently.
+
+**Setup (about ten minutes, free tier is plenty).** You need your own Supabase project, because the data is stored in
+it:
+
+1. Create a project at <https://supabase.com>.
+2. Open **SQL Editor**, paste the contents of `supabase/schema.sql` and run it. It creates the tables and the
+   row-level-security policies that stop one person reading another's rows. Do not skip it. It is safe to run twice.
+3. **Authentication › Providers**: email is on by default. Under **Authentication › URL Configuration** set the Site URL
+   to your web address (for example `https://mkdogs25.github.io/thali-tally/`) so confirmation emails link back to it.
+   You can switch email confirmation off under the email provider if you prefer.
+4. **Project Settings › API**: copy the *Project URL* and the *anon / publishable* key. Both are public by design; the
+   data is protected by the policies in step 2, not by hiding these.
+5. In GitHub, **Settings › Secrets and variables › Actions › Variables**, add `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+   The next build of the web app and the Android and iPhone apps picks them up. For local development, put
+   `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`.
+
+If those variables are missing the build is simply local-only and the Account card says so.
+
+What is and isn't tested: the sync logic is tested with two simulated phones, and the full sign-up, sign-in and sync flow
+runs end to end in a browser against a stand-in for Supabase's API. It has **not** been run against a real Supabase
+project, so expect to check the first real sign-in yourself.
 
 ## Connected apps (watches, Apple Health, Google/Android, Strava)
 
@@ -93,7 +130,7 @@ Notes:
   with `404.html`, which is what makes refreshes and shared deep links work. The browser console shows a 404 on those
   loads; that is expected.
 - Data lives in the browser's own storage (SQLite compiled to WebAssembly), so it stays on each device and browser
-  and is lost if site data is cleared.
+  and is lost if site data is cleared, unless you sign in to an account to sync it.
 - Steps, Apple Health, Health Connect and Strava are phone-app features and are not available on the web.
 - The downloadable web release zip is the same app built for a site root instead.
 
@@ -123,7 +160,18 @@ version number, edit `version` in `package.json`.
 - **Food values** are per 100 g raw, transcribed from ICMR-NIN IFCT 2017 / NIN tables. Dishes are computed from
   raw ingredient weights. The unit tests check every ingredient's calories against its protein/carbs/fat, which
   catches typos, but the table should still be spot-checked against the printed IFCT before relying on it medically.
+- **Protein targets** are 0.8 to 1.0 g per kg of body weight, scaled by activity (0.8 sedentary or light, 0.9 moderate, 1.0 very
+  active), and for weight loss are worked out on your target weight. That is deliberately at the modest end. If you lift
+  seriously, or are losing weight and want to protect muscle, a dietitian may suggest more.
+- **Workout plans** are rule-based templates, not a coach: exercises are chosen by your equipment, experience and time, and
+  calories use standard MET tables (energy above resting = (MET − 1) × kg × hours).
 - **Photos** cannot give reliable calories on their own; the app asks you to confirm dish and portion.
   There is no bundled recognition model yet — see `src/lib/classifier.ts` for the plug-in point.
+
+## Credits
+
+The typeface is **Libron** by Nico Verbruggen, from <https://github.com/nicoverbruggen/libron> (v0.31; itself based on
+Newsreader from Production Type). It is licensed under the SIL Open Font License 1.1 and bundled unmodified; the licence and
+copyright notice are in `assets/fonts/`.
 
 Not medical advice.

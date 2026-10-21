@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { notify } from '../../lib/dialogs';
 import { Text, TextInput } from '../Text';
 import { saveRecipe } from '../../lib/db';
 import { INGREDIENT_BY_ID, Part, partsNutrition, scale } from '../../lib/foods';
@@ -57,7 +58,7 @@ export function RecipeBuilder({ onLog }: { onLog: LogFn }) {
           />
           <Text style={{ marginHorizontal: 6, color: colors.muted }}>g</Text>
           <Pressable onPress={() => setRows((rs) => rs.filter((_, j) => j !== i))} hitSlop={10} accessibilityLabel="Remove ingredient">
-            <Text style={{ color: colors.muted, fontSize: 16 }}>✕</Text>
+            <Text style={{ color: colors.muted, fontSize: 16 }}>×</Text>
           </Pressable>
         </Row>
       ))}
@@ -71,7 +72,7 @@ export function RecipeBuilder({ onLog }: { onLog: LogFn }) {
           onCancel={() => setPicking(false)}
         />
       ) : (
-        <Button title="＋ Add ingredient" kind="secondary" onPress={() => setPicking(true)} />
+        <Button title="+ Add ingredient" kind="secondary" onPress={() => setPicking(true)} />
       )}
 
       {perServing && valid ? (
@@ -104,9 +105,9 @@ export function RecipeBuilder({ onLog }: { onLog: LogFn }) {
             title="Save recipe for later"
             kind="secondary"
             onPress={async () => {
-              if (!name.trim()) return Alert.alert('Name needed', 'Give the recipe a name to save it.');
+              if (!name.trim()) return notify('Name needed', 'Give the recipe a name to save it.');
               await saveRecipe(db, name.trim(), nServ, parts);
-              Alert.alert('Saved', 'Find it under “My recipes” in Search.');
+              notify('Saved', 'Find it under “My recipes” in Search.');
             }}
           />
         </Card>

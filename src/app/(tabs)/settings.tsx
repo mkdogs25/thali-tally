@@ -1,8 +1,11 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, Switch } from 'react-native';
+import { ScrollView, Switch } from 'react-native';
+import { confirmAction, notify } from '../../lib/dialogs';
 import { Text } from '../../components/Text';
+import { AccountCard } from '../../components/AccountCard';
+import { useAccount } from '../../components/AccountProvider';
 import { useSteps } from '../../components/StepsProvider';
 import { colors } from '../../components/theme';
 import { Button, Card, H1, H2, Muted, Row } from '../../components/ui';
@@ -23,13 +26,14 @@ export default function SettingsScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { reading, refresh } = useSteps();
+  const account = useAccount();
   const load = useCallback(() => getReminders(db), [db]);
   const [reminders, reload] = useFocusLoad<Reminders>(load, { meals: false, weighIn: false });
 
   const update = async (next: Reminders) => {
     const ok = await applyReminders(next);
     if (!ok) {
-      Alert.alert('Notifications are off', 'Allow notifications for Thali Tally in your phone settings to get reminders.');
+      notify('Notifications are off', 'Allow notifications for Thali Tally in your phone settings to get reminders.');
       return;
     }
     await saveReminders(db, next);
@@ -39,6 +43,8 @@ export default function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <H1>Settings</H1>
+
+      <AccountCard />
 
       <Card>
         <H2>Connected apps</H2>
@@ -76,29 +82,33 @@ export default function SettingsScreen() {
           Calories burned are estimates: walking is worked out from steps, your height (stride length) and your weight; resting burn uses the
           Mifflin-St Jeor formula.
           {'\n\n'}
-          All your data is stored only on this phone, in a local database. Nothing is uploaded. The only network request the app makes is the
-          optional barcode lookup, which sends the barcode number to Open Food Facts.
+          {account.status === 'signed-in'
+            ? 'You are signed in, so your food log, weights, recipes, profile and plans are also stored on your account. Steps, workouts and connected-app sign-ins stay on this device.'
+            : 'Your data is stored only on this phone, in a local database. Nothing is uploaded unless you sign in to an account above.'}
+          {' '}Other network requests: the optional barcode lookup sends the barcode number to Open Food Facts, and connected apps talk to their own services.
         </Muted>
       </Card>
 
       <Card>
         <H2>Your data</H2>
+        {account.status === 'signed-in' ? (
+          <Muted style={{ marginBottom: 10 }}>You are signed in, so your account keeps its copy and it comes back on the next sync. Sign out first to keep this phone separate.</Muted>
+        ) : null}
         <Button
-          title="Erase all data"
+          title="Erase all data on this device"
           kind="danger"
           onPress={() =>
-            Alert.alert('Erase everything?', 'This deletes your profile, plan, food log, weights and saved recipes from this phone.', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Erase',
-                style: 'destructive',
-                onPress: async () => {
-                  await eraseEverything(db);
-                  await applyReminders({ meals: false, weighIn: false });
-                  await reload();
-                },
+            confirmAction({
+              title: 'Erase everything?',
+              message: 'This deletes your profile, plans, food log, weights and saved recipes from this phone.',
+              confirmLabel: 'Erase',
+              destructive: true,
+              onConfirm: async () => {
+                await eraseEverything(db);
+                await applyReminders({ meals: false, weighIn: false });
+                await reload();
               },
-            ])
+            })
           }
         />
       </Card>
