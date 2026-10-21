@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
+import { Text, TextInput } from '../Text';
 import { saveRecipe } from '../../lib/db';
 import { INGREDIENT_BY_ID, Part, partsNutrition, scale } from '../../lib/foods';
 import { colors } from '../theme';
@@ -52,7 +53,7 @@ export function RecipeBuilder({ onLog }: { onLog: LogFn }) {
             keyboardType="decimal-pad"
             placeholder="g"
             placeholderTextColor={colors.muted}
-            style={{ width: 80, borderWidth: 1, borderColor: colors.line, borderRadius: 8, padding: 8, backgroundColor: '#fff', color: colors.text }}
+            style={{ width: 80, borderWidth: 1, borderColor: colors.line, borderRadius: 8, padding: 8, backgroundColor: colors.inputBg, color: colors.text }}
           />
           <Text style={{ marginHorizontal: 6, color: colors.muted }}>g</Text>
           <Pressable onPress={() => setRows((rs) => rs.filter((_, j) => j !== i))} hitSlop={10} accessibilityLabel="Remove ingredient">

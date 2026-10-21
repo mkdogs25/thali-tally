@@ -1,6 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import { Text } from '../Text';
 import { lookupBarcode, PackagedProduct } from '../../lib/barcode';
 import { scale } from '../../lib/foods';
 import { colors } from '../theme';

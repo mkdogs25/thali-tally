@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text, TextInput } from '../Text';
 import { INGREDIENTS } from '../../lib/foods';
 import { colors } from '../theme';
 import { Button, Muted } from '../ui';
@@ -15,7 +16,7 @@ export function IngredientPicker({ onPick, onCancel }: { onPick: (id: string) =>
         onChangeText={setQ}
         placeholder="Search ingredient…"
         placeholderTextColor={colors.muted}
-        style={{ borderWidth: 1, borderColor: colors.saffron, borderRadius: 10, backgroundColor: '#fff', padding: 10, fontSize: 16, color: colors.text }}
+        style={{ borderWidth: 1, borderColor: colors.accent, borderRadius: 10, backgroundColor: colors.inputBg, padding: 10, fontSize: 16, color: colors.text }}
       />
       {matches.map((i) => (
         <Pressable key={i.id} onPress={() => onPick(i.id)} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.line }}>

@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { colors } from '../../components/theme';
 import { Button, Card, Field, H1, H2, Muted, n0, n1, parseNum, Row } from '../../components/ui';
 import { Point, WeightChart } from '../../components/WeightChart';
@@ -62,9 +63,13 @@ export default function ProgressScreen() {
     const weeksIn = daysBetween(data.plan.startDate, latest.date) / 7;
     const diff = latest.kg - expectedWeight(data.plan, weeksIn);
     const ahead = data.plan.goal === 'lose' ? diff <= 0 : diff >= 0;
-    onTrack = ahead
-      ? `You're on or ahead of plan (${n1(Math.abs(diff))} kg ${diff === 0 ? '' : 'past'} the planned weight).`
-      : `You're ${n1(Math.abs(diff))} kg behind the planned weight. Small, steady changes add up.`;
+    const gap = Math.round(Math.abs(diff) * 10) / 10;
+    onTrack =
+      gap === 0
+        ? "You're right on plan."
+        : ahead
+          ? `You're ${n1(gap)} kg ahead of plan.`
+          : `You're ${n1(gap)} kg behind plan. Small, steady changes add up.`;
   }
 
   return (
@@ -116,7 +121,7 @@ export default function ProgressScreen() {
                   style={{
                     width: `${(kcal / maxKcal) * 100}%`,
                     height: 14,
-                    backgroundColor: targetKcal && kcal > targetKcal ? colors.red : colors.saffron,
+                    backgroundColor: targetKcal && kcal > targetKcal ? colors.red : colors.accent,
                   }}
                 />
               </View>

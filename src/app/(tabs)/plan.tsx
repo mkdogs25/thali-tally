@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { colors, MEAL_ICON } from '../../components/theme';
 import { Button, Card, Chip, Field, H1, H2, Muted, n0, n1, parseNum, Row, Wrap } from '../../components/ui';
 import { addDays, dateKey, formatDay } from '../../lib/dates';
@@ -123,7 +124,7 @@ export default function PlanScreen() {
       </Card>
 
       {shown ? (
-        <Card style={{ borderColor: colors.saffron }}>
+        <Card style={{ borderColor: colors.accent }}>
           <H2>{isPreview ? 'Proposed plan' : 'Current plan'}</H2>
           <Text style={{ fontSize: 30, fontWeight: '800', color: colors.text }}>{n0(shown.dailyKcal)} kcal / day</Text>
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein, marginBottom: 8 }}>{n0(shown.proteinG)} g protein / day</Text>
@@ -139,7 +140,7 @@ export default function PlanScreen() {
             Resting burn {n0(shown.bmr)} kcal · with your activity {n0(shown.tdee)} kcal/day.
           </Muted>
           {shown.warnings.map((w) => (
-            <Text key={w} style={{ color: colors.saffronDark, marginTop: 8 }}>
+            <Text key={w} style={{ color: colors.accentDark, marginTop: 8 }}>
               ⚠ {w}
             </Text>
           ))}

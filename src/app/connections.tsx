@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, View } from 'react-native';
+import { Text } from '../components/Text';
 import { useSteps } from '../components/StepsProvider';
 import { colors } from '../components/theme';
 import { Button, Card, Field, H2, Muted, Row } from '../components/ui';
@@ -97,7 +98,7 @@ export default function ConnectionsScreen() {
         never uploaded anywhere.
       </Muted>
 
-      {sources.length === 0 ? <Muted>Connected apps work in the Android and iPhone apps, not in the browser.</Muted> : null}
+      {sources.length === 0 ? <Muted style={{ marginBottom: 12 }}>Connected apps work in the Android and iPhone apps, not in the browser.</Muted> : null}
 
       {sources.map((s) => {
         const info = INFO[s.id];
@@ -130,7 +131,7 @@ export default function ConnectionsScreen() {
               </View>
             ) : null}
 
-            {blocked ? <Text style={{ color: colors.saffronDark, marginTop: 10 }}>{blocked}</Text> : null}
+            {blocked ? <Text style={{ color: colors.accentDark, marginTop: 10 }}>{blocked}</Text> : null}
             {error ? <Text style={{ color: colors.red, marginTop: 10 }}>{error}</Text> : null}
             {connected ? <Muted style={{ marginTop: 10 }}>Last synced {ago(st?.lastSync ?? null)}</Muted> : null}
 

@@ -1,7 +1,7 @@
 import { useWindowDimensions } from 'react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { daysBetween } from '../lib/dates';
-import { colors } from './theme';
+import { colors, SERIF } from './theme';
 
 export interface Point {
   date: string;
@@ -35,16 +35,16 @@ export function WeightChart({ actual, planned }: { actual: Point[]; planned: Poi
         <Line key={t} x1={pad.l} x2={width - pad.r} y1={y(t)} y2={y(t)} stroke={colors.line} strokeWidth={1} />
       ))}
       {ticks.map((t) => (
-        <SvgText key={`l${t}`} x={pad.l - 6} y={y(t) + 4} fontSize={11} fill={colors.muted} textAnchor="end">
+        <SvgText fontFamily={SERIF} key={`l${t}`} x={pad.l - 6} y={y(t) + 4} fontSize={11} fill={colors.muted} textAnchor="end">
           {Math.round(t * 10) / 10}
         </SvgText>
       ))}
-      <SvgText x={pad.l} y={height - 4} fontSize={11} fill={colors.muted}>{firstDate.slice(5)}</SvgText>
-      <SvgText x={width - pad.r} y={height - 4} fontSize={11} fill={colors.muted} textAnchor="end">{lastDate.slice(5)}</SvgText>
+      <SvgText fontFamily={SERIF} x={pad.l} y={height - 4} fontSize={11} fill={colors.muted}>{firstDate.slice(5)}</SvgText>
+      <SvgText fontFamily={SERIF} x={width - pad.r} y={height - 4} fontSize={11} fill={colors.muted} textAnchor="end">{lastDate.slice(5)}</SvgText>
       {planned.length > 1 ? <Polyline points={line(planned)} fill="none" stroke={colors.muted} strokeWidth={2} strokeDasharray="6 5" /> : null}
-      {actual.length > 1 ? <Polyline points={line(actual)} fill="none" stroke={colors.saffron} strokeWidth={3} /> : null}
+      {actual.length > 1 ? <Polyline points={line(actual)} fill="none" stroke={colors.accent} strokeWidth={3} /> : null}
       {actual.map((p) => (
-        <Circle key={p.date} cx={x(p.date)} cy={y(p.kg)} r={4} fill={colors.saffron} />
+        <Circle key={p.date} cx={x(p.date)} cy={y(p.kg)} r={4} fill={colors.accent} />
       ))}
     </Svg>
   );

@@ -40,7 +40,7 @@ export function PhotoLog({ onLog }: { onLog: LogFn }) {
       <Button title="Choose from gallery" kind="secondary" onPress={pickPhoto} />
 
       {!classifierAvailable ? (
-        <Card style={{ backgroundColor: '#FDF0DE' }}>
+        <Card style={{ backgroundColor: colors.soft }}>
           <Muted>
             Automatic dish recognition is not installed yet, so identify the dish yourself below. The photo is only used to jog your memory
             and stays on your phone.

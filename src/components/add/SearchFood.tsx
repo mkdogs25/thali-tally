@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
+import { Text, TextInput } from '../Text';
 import { deleteRecipe, FoodSource, getRecipes, SavedRecipe } from '../../lib/db';
 import {
   Dish,
@@ -106,12 +107,12 @@ export function SearchFood({ source, onLog }: { source: FoodSource; onLog: LogFn
           placeholder="Search dal, paneer, roti, poha…"
           placeholderTextColor={colors.muted}
           autoCorrect={false}
-          style={{ borderWidth: 1, borderColor: colors.line, borderRadius: 10, backgroundColor: '#fff', padding: 12, fontSize: 16, color: colors.text }}
+          style={{ borderWidth: 1, borderColor: colors.line, borderRadius: 10, backgroundColor: colors.inputBg, padding: 12, fontSize: 16, color: colors.text }}
         />
       </View>
 
       {selected && nutrition ? (
-        <Card style={{ borderColor: colors.saffron }}>
+        <Card style={{ borderColor: colors.accent }}>
           <H2>{name}</H2>
           <Field label={unit === 'grams' ? 'Amount (grams, raw weight)' : 'Number of servings'} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
           {unit !== 'grams' ? (

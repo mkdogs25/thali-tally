@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, TextInputProps, View, ViewStyle } from 'react-native';
+import { Text, TextInput } from './Text';
 import { colors } from './theme';
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
@@ -41,7 +42,7 @@ export function Button({
         (pressed || disabled) && { opacity: disabled ? 0.45 : 0.8 },
       ]}
     >
-      <Text style={[styles.buttonText, kind === 'secondary' && { color: colors.saffronDark }]}>{title}</Text>
+      <Text style={[styles.buttonText, kind === 'secondary' && { color: colors.accentDark }]}>{title}</Text>
     </Pressable>
   );
 }
@@ -49,7 +50,7 @@ export function Button({
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }} style={[styles.chip, selected && styles.chipOn]}>
-      <Text style={[styles.chipText, selected && { color: '#fff' }]}>{label}</Text>
+      <Text style={[styles.chipText, selected && { color: colors.onAccent }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -94,15 +95,15 @@ const styles = StyleSheet.create({
   h1: { fontSize: 26, fontWeight: '800', color: colors.text, marginBottom: 4 },
   h2: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: 8 },
   muted: { fontSize: 13, color: colors.muted, lineHeight: 18 },
-  button: { backgroundColor: colors.saffron, borderRadius: 12, paddingVertical: 13, paddingHorizontal: 18, alignItems: 'center', marginBottom: 10 },
-  buttonSecondary: { backgroundColor: '#FDF0DE' },
+  button: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 13, paddingHorizontal: 18, alignItems: 'center', marginBottom: 10 },
+  buttonSecondary: { backgroundColor: colors.soft },
   buttonDanger: { backgroundColor: colors.red },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#F3EBDD' },
-  chipOn: { backgroundColor: colors.saffron },
+  buttonText: { color: colors.onAccent, fontWeight: '700', fontSize: 15 },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.soft },
+  chipOn: { backgroundColor: colors.accent },
   chipText: { color: colors.text, fontWeight: '600', fontSize: 13 },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 4 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: 10, backgroundColor: '#fff' },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: 10, backgroundColor: colors.inputBg },
   input: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, fontSize: 16, color: colors.text },
   suffix: { paddingRight: 12, color: colors.muted },
   track: { height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: 'hidden' },

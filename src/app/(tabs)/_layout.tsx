@@ -1,15 +1,27 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-import { colors } from '../../components/theme';
+import { Platform } from 'react-native';
+import { Text } from '../../components/Text';
+import { colors, SERIF } from '../../components/theme';
 
-const icon = (glyph: string) => () => <Text style={{ fontSize: 20 }}>{glyph}</Text>;
+const icon = (glyph: string) => () => <Text style={{ fontSize: 18 }}>{glyph}</Text>;
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.saffronDark,
+        tabBarActiveTintColor: colors.accentDark,
+        tabBarInactiveTintColor: colors.muted,
+        // flexShrink: 0 stops the navigator squeezing the label (which clips at its own box) so descenders survive.
+        tabBarLabelStyle: { fontFamily: SERIF, fontSize: 12, lineHeight: 16, flexShrink: 0 },
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.line,
+          // On the web the default bar is too short for serif labels with descenders. On phones the navigator's
+          // own height already includes the safe area, so it is left alone there.
+          ...(Platform.OS === 'web' ? { height: 68, paddingTop: 6, paddingBottom: 8 } : null),
+        },
         headerStyle: { backgroundColor: colors.bg },
+        headerTitleStyle: { fontFamily: SERIF, color: colors.text, fontWeight: '700' },
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.bg },
       }}

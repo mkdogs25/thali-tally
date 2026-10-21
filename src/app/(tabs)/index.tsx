@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { useState } from 'react';
 import { useSteps } from '../../components/StepsProvider';
 import { colors, MEAL_ICON } from '../../components/theme';
@@ -85,7 +86,7 @@ export default function TodayScreen() {
       <Muted>{formatDay(today)}</Muted>
 
       {!data.plan || !data.profile ? (
-        <Card style={{ backgroundColor: '#FDF0DE' }}>
+        <Card style={{ backgroundColor: colors.soft }}>
           <H2>Set up your goal</H2>
           <Muted>
             Add your details and goal on the Plan tab to get daily calorie and protein targets and an accurate calorie-burn estimate.
@@ -103,7 +104,7 @@ export default function TodayScreen() {
             {n0(eaten.kcal)} <Text style={{ fontSize: 14, color: colors.muted }}>/ {n0(targetKcal)} kcal</Text>
           </Text>
         </Row>
-        <ProgressBar value={eaten.kcal} max={targetKcal} color={colors.saffron} />
+        <ProgressBar value={eaten.kcal} max={targetKcal} color={colors.accent} />
         <Muted style={{ marginTop: 6 }}>
           {eaten.kcal <= targetKcal ? `${n0(targetKcal - eaten.kcal)} kcal left` : `${n0(eaten.kcal - targetKcal)} kcal over target`}
         </Muted>
@@ -126,7 +127,7 @@ export default function TodayScreen() {
         <Muted style={{ marginTop: 6 }}>
           {km !== null ? `${n1(km)} km walked · ` : ''}goal 10,000
         </Muted>
-        {reading.note ? <Muted style={{ marginTop: 6, color: colors.saffronDark }}>{reading.note}</Muted> : null}
+        {reading.note ? <Muted style={{ marginTop: 6, color: colors.accentDark }}>{reading.note}</Muted> : null}
 
         {burned !== null && activeKcal !== null && restKcal !== null ? (
           <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12 }}>

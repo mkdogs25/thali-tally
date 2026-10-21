@@ -1,7 +1,8 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, Switch, Text } from 'react-native';
+import { Alert, ScrollView, Switch } from 'react-native';
+import { Text } from '../../components/Text';
 import { useSteps } from '../../components/StepsProvider';
 import { colors } from '../../components/theme';
 import { Button, Card, H1, H2, Muted, Row } from '../../components/ui';
