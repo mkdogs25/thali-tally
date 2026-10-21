@@ -1,0 +1,193 @@
+name: Release builds
+
+# Every push builds the app three ways and publishes three separate GitHub Releases:
+#   android-v<version>-build.<N>   Thali-Tally-<version>-build<N>-android.apk
+#   ios-v<version>-build.<N>       Thali-Tally-<version>-build<N>-ios-unsigned.ipa
+#   web-v<version>-build.<N>       Thali-Tally-<version>-build<N>-web.zip
+# Pushes to the default branch are normal releases; every other branch is marked "pre-release".
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: write # create releases and tags
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: '1'
+  EXPO_NO_TELEMETRY: '1'
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  check:
+    name: Typecheck and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      build: ${{ steps.meta.outputs.build }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Work out version and release flags
+        id: meta
+        run: |
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref_name }}" = "${{ github.event.repository.default_branch }}" ]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  android:
+    name: Android APK
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      BUILD: ${{ needs.check.outputs.build }}
+      PRERELEASE: ${{ needs.check.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: node scripts/set-build-number.js "$BUILD"
+      - name: Generate the native Android project
+        run: npx expo prebuild --platform android --no-install
+      - name: Build release APK
+        working-directory: android
+        # arm64 + armeabi-v7a covers every current phone and keeps the build short.
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+      - name: Publish release
+        run: |
+          TAG="android-v${VERSION}-build.${BUILD}"
+          ASSET="Thali-Tally-${VERSION}-build${BUILD}-android.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$ASSET"
+          cat > notes.md <<EOF
+          **Android** build ${BUILD} of version ${VERSION}, from \`${GITHUB_REF_NAME}\` @ \`${GITHUB_SHA::7}\`.
+
+          Install: download the APK, open it on your phone and allow "install unknown apps" when asked.
+          It is signed with the standard debug key, so it installs and updates fine on your own devices
+          but cannot be uploaded to the Play Store.
+
+          This build includes Android Health Connect, so it counts steps all day. Open Health Connect and
+          make sure a step source (Google Fit, Samsung Health, ...) is recording.
+          EOF
+          gh release delete "$TAG" --cleanup-tag --yes || true
+          FLAGS=(); [ "$PRERELEASE" = "true" ] && FLAGS+=(--prerelease)
+          gh release create "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Android ${VERSION} (build ${BUILD})" --notes-file notes.md ${FLAGS[@]+"${FLAGS[@]}"}
+
+  ios:
+    name: iPhone IPA
+    needs: check
+    runs-on: macos-latest
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      BUILD: ${{ needs.check.outputs.build }}
+      PRERELEASE: ${{ needs.check.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/set-build-number.js "$BUILD"
+      - name: Generate the native iOS project (also runs pod install)
+        run: npx expo prebuild --platform ios
+      - name: Build unsigned release app
+        run: |
+          xcodebuild -version
+          WORKSPACE=$(ls -d ios/*.xcworkspace | head -1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcodebuild \
+            -workspace "$WORKSPACE" -scheme "$SCHEME" \
+            -configuration Release -sdk iphoneos \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
+      - name: Package the .ipa
+        run: |
+          mkdir Payload
+          cp -R "ios/build/Build/Products/Release-iphoneos/${SCHEME}.app" Payload/
+          zip -qry "Thali-Tally-${VERSION}-build${BUILD}-ios-unsigned.ipa" Payload
+      - name: Publish release
+        run: |
+          TAG="ios-v${VERSION}-build.${BUILD}"
+          ASSET="Thali-Tally-${VERSION}-build${BUILD}-ios-unsigned.ipa"
+          cat > notes.md <<EOF
+          **iPhone** build ${BUILD} of version ${VERSION}, from \`${GITHUB_REF_NAME}\` @ \`${GITHUB_SHA::7}\`.
+
+          This IPA is **unsigned**: iOS will not run it as-is, because signing needs an Apple Developer
+          account that this repository does not have. To install it on your own iPhone, re-sign it with
+          your free Apple ID using Sideloadly or AltStore (apps installed this way expire after 7 days
+          and must be refreshed). For TestFlight or the App Store, add Apple signing credentials and an
+          EAS or Fastlane step.
+          EOF
+          gh release delete "$TAG" --cleanup-tag --yes || true
+          FLAGS=(); [ "$PRERELEASE" = "true" ] && FLAGS+=(--prerelease)
+          gh release create "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "iPhone ${VERSION} (build ${BUILD})" --notes-file notes.md ${FLAGS[@]+"${FLAGS[@]}"}
+
+  web:
+    name: Web build
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      BUILD: ${{ needs.check.outputs.build }}
+      PRERELEASE: ${{ needs.check.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/set-build-number.js "$BUILD"
+      - name: Export static site
+        run: npx expo export --platform web --output-dir dist
+      - name: Package
+        run: |
+          touch dist/.nojekyll # GitHub Pages would otherwise skip the _expo folder
+          (cd dist && zip -qr "../Thali-Tally-${VERSION}-build${BUILD}-web.zip" .)
+      - name: Publish release
+        run: |
+          TAG="web-v${VERSION}-build.${BUILD}"
+          ASSET="Thali-Tally-${VERSION}-build${BUILD}-web.zip"
+          cat > notes.md <<EOF
+          **Web** build ${BUILD} of version ${VERSION}, from \`${GITHUB_REF_NAME}\` @ \`${GITHUB_SHA::7}\`.
+
+          A static site: unzip it and host the folder on any static host (GitHub Pages, Netlify, Cloudflare
+          Pages, S3), or try it locally with \`npx serve <folder>\`. Your data is kept in the browser's own
+          storage on that device. Step counting is not available on the web.
+          EOF
+          gh release delete "$TAG" --cleanup-tag --yes || true
+          FLAGS=(); [ "$PRERELEASE" = "true" ] && FLAGS+=(--prerelease)
+          gh release create "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Web ${VERSION} (build ${BUILD})" --notes-file notes.md ${FLAGS[@]+"${FLAGS[@]}"}

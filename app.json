@@ -34,18 +34,33 @@
       "expo-sqlite",
       [
         "expo-camera",
-        { "cameraPermission": "Thali Tally uses the camera to photograph your food and scan barcodes." }
+        {
+          "cameraPermission": "Thali Tally uses the camera to photograph your food and scan barcodes."
+        }
       ],
       [
         "expo-image-picker",
-        { "cameraPermission": "Thali Tally uses the camera to photograph your food." }
+        {
+          "cameraPermission": "Thali Tally uses the camera to photograph your food."
+        }
       ],
       "expo-notifications",
       "react-native-health-connect",
       [
         "expo-build-properties",
-        { "android": { "compileSdkVersion": 36, "targetSdkVersion": 36, "minSdkVersion": 26 } }
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 26
+          }
+        }
       ]
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    }
   }
 }
