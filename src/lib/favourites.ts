@@ -27,15 +27,13 @@ export interface ResolvedFavourite {
 export const dishFavourite = (dishId: string) => `dish:${dishId}`;
 export const recipeFavourite = (uid: string) => `recipe:${uid}`;
 
-const BREAKFAST = new Set(['poha', 'upma', 'idli', 'dosa', 'masala_dosa', 'besan_chilla', 'oats', 'paratha', 'aloo_paratha']);
-const SNACK = new Set(['roasted_chana', 'makhana', 'peanuts', 'almonds', 'banana', 'chai', 'sattu_drink', 'sprouts_salad', 'chaas']);
-
-/** A sensible first guess at which meals a food belongs to; the person can change it. */
+/** A sensible first guess at which meals a food belongs to, from its categories; the person can change it. */
 export function defaultMeals(favouriteId: string): MealType[] {
   if (favouriteId.startsWith('dish:')) {
-    const dish = favouriteId.slice(5);
-    if (BREAKFAST.has(dish)) return ['breakfast'];
-    if (SNACK.has(dish)) return ['snack'];
+    const tags = DISH_BY_ID[favouriteId.slice(5)]?.tags ?? [];
+    if (tags.includes('breakfast')) return ['breakfast'];
+    if (tags.includes('tea-coffee')) return ['breakfast', 'snack'];
+    if (tags.includes('beverages') || tags.includes('fruit') || tags.includes('street') || tags.includes('sweets')) return ['snack'];
   }
   return ['lunch', 'dinner'];
 }

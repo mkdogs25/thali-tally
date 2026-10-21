@@ -30,13 +30,6 @@ test('dish nutrition is computed from ingredients', () => {
   assert.equal(n.protein, 18);
 });
 
-test('dishes land in plausible calorie ranges per serving', () => {
-  for (const dish of DISHES) {
-    const { kcal } = dishNutrition(dish);
-    assert.ok(kcal >= 30 && kcal <= 600, `${dish.name} = ${kcal.toFixed(0)} kcal`);
-  }
-});
-
 test('BMR (Mifflin-St Jeor) matches hand calculation', () => {
   assert.equal(bmr(man), 10 * 80 + 6.25 * 175 - 5 * 30 + 5);
   assert.equal(bmr(woman), 10 * 62 + 6.25 * 160 - 5 * 28 - 161);

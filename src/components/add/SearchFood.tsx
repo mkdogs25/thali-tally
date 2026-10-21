@@ -1,22 +1,24 @@
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { BrowseItem } from '../../lib/browse';
 import { confirmAction } from '../../lib/dialogs';
-import { Text, TextInput } from '../Text';
 import { deleteRecipe, FoodSource, getRecipes, SavedRecipe } from '../../lib/db';
 import {
   Dish,
+  DISHES,
   dishNutrition,
   Ingredient,
+  INGREDIENTS,
   ingredientNutrition,
   Nutrition,
   partsNutrition,
   scale,
-  searchFoods,
 } from '../../lib/foods';
 import { useFocusLoad } from '../../lib/useFocusLoad';
+import { FoodBrowser, MY_RECIPES } from '../FoodBrowser';
+import { Text } from '../Text';
 import { colors } from '../theme';
-import { Button, Card, Chip, Field, H2, Muted, n0, n1, parseNum, Row, Wrap } from '../ui';
+import { Button, Card, Chip, Field, H2, n0, n1, parseNum, Wrap } from '../ui';
 import type { LogFn } from './types';
 
 type Selection =
@@ -24,23 +26,33 @@ type Selection =
   | { kind: 'ingredient'; ingredient: Ingredient }
   | { kind: 'recipe'; recipe: SavedRecipe };
 
-/** Search the bundled Indian food list and saved recipes, pick an amount, and log it. */
+/** Browse the bundled food list by category (or search it) plus saved recipes, pick an amount, and log it. */
 export function SearchFood({ source, onLog }: { source: FoodSource; onLog: LogFn }) {
   const db = useSQLiteContext();
-  const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Selection | null>(null);
   const [amount, setAmount] = useState('1');
 
   const loadRecipes = useCallback(() => getRecipes(db), [db]);
   const [recipes, reloadRecipes] = useFocusLoad<SavedRecipe[]>(loadRecipes, []);
 
-  const { dishes, ingredients } = searchFoods(query);
-  const q = query.trim().toLowerCase();
-  const myRecipes = recipes.filter((r) => !q || r.name.toLowerCase().includes(q));
+  const items = useMemo<BrowseItem<Selection>[]>(
+    () => [
+      ...recipes.map((r) => {
+        const n = scale(partsNutrition(r.parts), 1 / r.servings);
+        return { key: `r${r.id}`, name: r.name, sub: 'per serving · hold to delete', kcal: n.kcal, protein: n.protein, tags: [MY_RECIPES.id], value: { kind: 'recipe', recipe: r } as Selection };
+      }),
+      ...DISHES.map((x) => {
+        const n = dishNutrition(x);
+        return { key: x.id, name: x.name, sub: x.serving, kcal: n.kcal, protein: n.protein, tags: x.tags, keywords: x.keywords, value: { kind: 'dish', dish: x } as Selection };
+      }),
+      ...INGREDIENTS.map((x) => ({ key: `i-${x.id}`, name: x.name, sub: 'per 100 g, raw', kcal: x.kcal, protein: x.protein, tags: ['ingredients'], value: { kind: 'ingredient', ingredient: x } as Selection })),
+    ],
+    [recipes],
+  );
 
-  const choose = (s: Selection) => {
-    setSelected(s);
-    setAmount(s.kind === 'ingredient' ? '100' : '1');
+  const choose = (item: BrowseItem<Selection>) => {
+    setSelected(item.value);
+    setAmount(item.value.kind === 'ingredient' ? '100' : '1');
   };
 
   const qty = parseNum(amount);
@@ -57,7 +69,6 @@ export function SearchFood({ source, onLog }: { source: FoodSource; onLog: LogFn
       nutrition = ingredientNutrition(selected.ingredient.id, qty);
       name = selected.ingredient.name;
       qtyLabel = `${n0(qty)} g raw`;
-      unit = 'grams';
     } else {
       nutrition = scale(partsNutrition(selected.recipe.parts), qty / selected.recipe.servings);
       name = selected.recipe.name;
@@ -79,91 +90,45 @@ export function SearchFood({ source, onLog }: { source: FoodSource; onLog: LogFn
     });
   };
 
-  const row = (key: string, title: string, sub: string, kcal: number, protein: number, s: Selection, onLongPress?: () => void) => (
-    <Pressable
-      key={key}
-      onPress={() => choose(s)}
-      onLongPress={onLongPress}
-      style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.line }}
-    >
-      <Row style={{ justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, paddingRight: 8 }}>
-          <Text style={{ color: colors.text, fontWeight: '600' }}>{title}</Text>
-          <Muted>{sub}</Muted>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ color: colors.text, fontWeight: '700' }}>{n0(kcal)} kcal</Text>
-          <Muted>{n1(protein)} g protein</Muted>
-        </View>
-      </Row>
-    </Pressable>
-  );
+  const amountCard =
+    selected && nutrition ? (
+      <Card style={{ borderColor: colors.accent }}>
+        <H2>{name}</H2>
+        <Field label={unit === 'grams' ? 'Amount (grams, raw weight)' : 'Number of servings'} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+        {unit !== 'grams' ? (
+          <Wrap>
+            {[0.5, 1, 1.5, 2, 3].map((v) => (
+              <Chip key={v} label={`${v}×`} selected={qty === v} onPress={() => setAmount(String(v))} />
+            ))}
+          </Wrap>
+        ) : null}
+        <Text style={{ color: colors.text, fontSize: 16, marginBottom: 12 }}>
+          <Text style={{ fontWeight: '800' }}>{n0(nutrition.kcal)} kcal</Text> · {n1(nutrition.protein)} g protein · {n1(nutrition.carbs)} g carbs · {n1(nutrition.fat)} g fat
+        </Text>
+        <Button title="Add to log" onPress={submit} />
+        <Button title="Cancel" kind="secondary" onPress={() => setSelected(null)} />
+      </Card>
+    ) : null;
 
   return (
-    <View>
-      <View style={{ marginBottom: 12 }}>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search dal, paneer, roti, poha…"
-          placeholderTextColor={colors.muted}
-          autoCorrect={false}
-          style={{ borderWidth: 1, borderColor: colors.line, borderRadius: 10, backgroundColor: colors.inputBg, padding: 12, fontSize: 16, color: colors.text }}
-        />
-      </View>
-
-      {selected && nutrition ? (
-        <Card style={{ borderColor: colors.accent }}>
-          <H2>{name}</H2>
-          <Field label={unit === 'grams' ? 'Amount (grams, raw weight)' : 'Number of servings'} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-          {unit !== 'grams' ? (
-            <Wrap>
-              {[0.5, 1, 1.5, 2, 3].map((v) => (
-                <Chip key={v} label={`${v}×`} selected={qty === v} onPress={() => setAmount(String(v))} />
-              ))}
-            </Wrap>
-          ) : null}
-          <Text style={{ color: colors.text, fontSize: 16, marginBottom: 12 }}>
-            <Text style={{ fontWeight: '800' }}>{n0(nutrition.kcal)} kcal</Text> · {n1(nutrition.protein)} g protein · {n1(nutrition.carbs)} g carbs · {n1(nutrition.fat)} g fat
-          </Text>
-          <Button title="Add to log" onPress={submit} />
-          <Button title="Cancel" kind="secondary" onPress={() => setSelected(null)} />
-        </Card>
-      ) : null}
-
-      {myRecipes.length > 0 ? (
-        <>
-          <H2>My recipes</H2>
-          {myRecipes.map((r) => {
-            const n = scale(partsNutrition(r.parts), 1 / r.servings);
-            return row(`r${r.id}`, r.name, 'per serving · hold to delete', n.kcal, n.protein, { kind: 'recipe', recipe: r }, () =>
-              confirmAction({
-                title: 'Delete recipe?',
-                message: r.name,
-                confirmLabel: 'Delete',
-                destructive: true,
-                onConfirm: async () => {
-                  await deleteRecipe(db, r.id);
-                  await reloadRecipes();
-                },
-              }),
-            );
-          })}
-        </>
-      ) : null}
-
-      {dishes.length > 0 ? <H2>Dishes</H2> : null}
-      {dishes.map((x) => {
-        const n = dishNutrition(x);
-        return row(x.id, x.name, x.serving, n.kcal, n.protein, { kind: 'dish', dish: x });
-      })}
-
-      {ingredients.length > 0 ? <H2>Ingredients (per 100 g, raw)</H2> : null}
-      {ingredients.map((x) => row(x.id, x.name, 'per 100 g', x.kcal, x.protein, { kind: 'ingredient', ingredient: x }))}
-
-      {dishes.length + ingredients.length + myRecipes.length === 0 ? (
-        <Muted>No match. Try the Recipe tab to build it from ingredients, or Quick add to type the numbers.</Muted>
-      ) : null}
-    </View>
+    <FoodBrowser
+      items={items}
+      onSelect={choose}
+      leading={amountCard}
+      onLongPress={(item) => {
+        if (item.value.kind !== 'recipe') return;
+        const recipe = item.value.recipe;
+        confirmAction({
+          title: 'Delete recipe?',
+          message: recipe.name,
+          confirmLabel: 'Delete',
+          destructive: true,
+          onConfirm: async () => {
+            await deleteRecipe(db, recipe.id);
+            await reloadRecipes();
+          },
+        });
+      }}
+    />
   );
 }

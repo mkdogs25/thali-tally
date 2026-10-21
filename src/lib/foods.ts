@@ -11,6 +11,8 @@
  * medical purposes (see README).
  */
 
+import { ALIASES, DISH_ROWS } from './dishData';
+
 export interface Nutrition {
   kcal: number;
   protein: number;
@@ -86,6 +88,37 @@ const INGREDIENT_ROWS: [string, string, number, number, number, number][] = [
   ['banana', 'Banana', 116, 1.2, 27.2, 0.3],
   ['apple', 'Apple', 59, 0.2, 13.4, 0.5],
   ['mango', 'Mango, ripe', 74, 0.6, 16.9, 0.4],
+  ['maize_flour', 'Maize flour (makki atta)', 355, 11.1, 66.2, 3.6],
+  ['sabudana', 'Sabudana (tapioca pearls)', 351, 0.2, 86.6, 0.2],
+  ['daliya', 'Daliya (broken wheat)', 342, 11.3, 69.0, 1.2],
+  ['cornflakes', 'Corn flakes', 358, 6.8, 84.0, 0.4],
+  ['bread', 'Bread, white', 245, 8.7, 50.0, 1.0],
+  ['puffed_rice', 'Puffed rice (murmura)', 325, 7.1, 77.0, 0.5],
+  ['khoya', 'Khoya (mawa)', 421, 14.6, 20.5, 31.2],
+  ['honey', 'Honey', 304, 0.3, 82.4, 0],
+  ['coffee_powder', 'Instant coffee powder', 241, 12.2, 41.1, 0.5],
+  ['tea_brewed', 'Tea, brewed (no milk or sugar)', 1, 0, 0.25, 0],
+  ['coconut_water', 'Coconut water', 19, 0.7, 3.7, 0.2],
+  ['orange_juice', 'Orange juice', 45, 0.7, 10.4, 0.2],
+  ['cola', 'Cola (soft drink)', 42, 0, 10.6, 0],
+  ['mushroom', 'Mushroom', 26, 3.1, 3.3, 0.4],
+  ['beetroot', 'Beetroot', 43, 1.7, 9.6, 0.1],
+  ['methi', 'Fenugreek leaves (methi)', 49, 4.4, 6.0, 0.9],
+  ['sweet_potato', 'Sweet potato', 120, 1.2, 28.2, 0.3],
+  ['french_beans', 'French beans', 26, 1.7, 4.5, 0.1],
+  ['pumpkin', 'Pumpkin', 25, 1.0, 4.6, 0.1],
+  ['radish', 'Radish (mooli)', 17, 0.6, 3.4, 0.1],
+  ['orange', 'Orange', 48, 0.9, 10.9, 0.3],
+  ['papaya', 'Papaya', 32, 0.6, 7.2, 0.1],
+  ['guava', 'Guava', 51, 0.9, 11.2, 0.3],
+  ['watermelon', 'Watermelon', 16, 0.6, 3.4, 0.2],
+  ['grapes', 'Grapes', 71, 0.5, 16.5, 0.2],
+  ['pomegranate', 'Pomegranate', 65, 1.6, 14.5, 0.1],
+  ['pineapple', 'Pineapple', 46, 0.4, 10.8, 0.1],
+  ['chikoo', 'Chikoo (sapota)', 98, 0.7, 21.4, 1.1],
+  ['dates', 'Dates, dried', 283, 2.5, 65.5, 0.4],
+  ['raisins', 'Raisins', 308, 2.1, 75.0, 0.3],
+  ['walnuts', 'Walnuts', 654, 15.2, 13.7, 65.2],
 ];
 
 export const INGREDIENTS: Ingredient[] = INGREDIENT_ROWS.map(([id, name, kcal, protein, carbs, fat]) => ({
@@ -118,69 +151,58 @@ export interface Dish {
   name: string;
   /** What one serving is, in everyday terms. */
   serving: string;
+  /** Category ids this dish is listed under (see CATEGORIES); a dish can belong to several. */
+  tags: string[];
+  /** Other names and spellings people search by (never shown). */
+  keywords: string;
   parts: Part[];
 }
 
-const d = (id: string, name: string, serving: string, parts: [string, number][]): Dish => ({
+export const DISHES: Dish[] = DISH_ROWS.map(([id, name, serving, tags, parts]) => ({
   id,
   name,
   serving,
+  tags,
+  keywords: ALIASES[id] ?? '',
   parts: parts.map(([ingredient, grams]) => ({ ingredient, grams })),
-});
+}));
 
-// Raw ingredient grams per serving.
-export const DISHES: Dish[] = [
-  // Breads & grains
-  d('roti', 'Roti / phulka', '1 medium', [['atta', 30]]),
-  d('paratha', 'Plain paratha', '1 medium', [['atta', 40], ['ghee', 5]]),
-  d('aloo_paratha', 'Aloo paratha', '1 medium', [['atta', 45], ['potato', 50], ['oil', 6]]),
-  d('rice', 'Steamed rice', '1 katori (~150 g cooked)', [['rice', 50]]),
-  d('jeera_rice', 'Jeera rice', '1 katori', [['rice', 50], ['ghee', 4]]),
-  d('veg_pulao', 'Veg pulao', '1 plate', [['rice', 70], ['peas', 20], ['carrot', 20], ['onion', 15], ['oil', 8]]),
-  d('khichdi', 'Moong dal khichdi', '1 bowl', [['rice', 40], ['moong_dal', 30], ['ghee', 5]]),
-  d('curd_rice', 'Curd rice', '1 bowl', [['rice', 50], ['curd', 100]]),
-  // Breakfast
-  d('poha', 'Poha', '1 plate', [['poha', 50], ['potato', 20], ['onion', 20], ['peanuts', 10], ['oil', 6]]),
-  d('upma', 'Upma', '1 plate', [['sooji', 50], ['onion', 20], ['peas', 15], ['oil', 6]]),
-  d('idli', 'Idli', '2 pieces', [['rice', 30], ['urad_dal', 10]]),
-  d('dosa', 'Plain dosa', '1 medium', [['rice', 30], ['urad_dal', 10], ['oil', 4]]),
-  d('masala_dosa', 'Masala dosa', '1 medium', [['rice', 40], ['urad_dal', 13], ['potato', 60], ['onion', 20], ['oil', 8]]),
-  d('besan_chilla', 'Besan chilla', '2 pieces', [['besan', 50], ['onion', 20], ['tomato', 15], ['oil', 6]]),
-  d('oats', 'Oats porridge with milk', '1 bowl', [['oats', 40], ['milk', 150]]),
-  // Dals & legumes
-  d('dal_tadka', 'Dal tadka (toor)', '1 katori', [['toor_dal', 35], ['onion', 15], ['tomato', 20], ['oil', 5]]),
-  d('moong_dal', 'Moong dal', '1 katori', [['moong_dal', 35], ['ghee', 4], ['tomato', 15]]),
-  d('sambar', 'Sambar', '1 katori', [['toor_dal', 25], ['lauki', 50], ['tomato', 20], ['onion', 15], ['oil', 3]]),
-  d('rajma', 'Rajma masala', '1 katori', [['rajma', 40], ['onion', 30], ['tomato', 40], ['oil', 6]]),
-  d('chole', 'Chole masala', '1 katori', [['kabuli_chana', 45], ['onion', 30], ['tomato', 40], ['oil', 7]]),
-  d('soya_curry', 'Soya chunk curry', '1 katori', [['soya_chunks', 30], ['onion', 30], ['tomato', 40], ['oil', 6]]),
-  d('sprouts_salad', 'Sprouts salad', '1 bowl', [['sprouts', 80], ['onion', 15], ['tomato', 20], ['cucumber', 30]]),
-  // Paneer
-  d('palak_paneer', 'Palak paneer', '1 katori', [['paneer', 60], ['spinach', 100], ['onion', 20], ['oil', 6]]),
-  d('matar_paneer', 'Matar paneer', '1 katori', [['paneer', 60], ['peas', 50], ['onion', 30], ['tomato', 40], ['oil', 7]]),
-  d('paneer_bhurji', 'Paneer bhurji', '1 katori', [['paneer', 80], ['onion', 30], ['tomato', 30], ['oil', 6]]),
-  d('paneer_tikka', 'Paneer tikka', '5–6 pieces', [['paneer', 100], ['curd', 30], ['capsicum', 30], ['oil', 5]]),
-  // Sabzis
-  d('aloo_gobi', 'Aloo gobi', '1 katori', [['potato', 80], ['cauliflower', 80], ['onion', 20], ['oil', 7]]),
-  d('bhindi', 'Bhindi fry', '1 katori', [['okra', 120], ['onion', 20], ['oil', 7]]),
-  d('baingan_bharta', 'Baingan bharta', '1 katori', [['brinjal', 150], ['onion', 30], ['tomato', 30], ['oil', 7]]),
-  d('lauki_sabzi', 'Lauki sabzi', '1 katori', [['lauki', 150], ['tomato', 20], ['oil', 5]]),
-  d('cabbage_sabzi', 'Cabbage matar sabzi', '1 katori', [['cabbage', 120], ['peas', 20], ['oil', 5]]),
-  d('mixed_veg', 'Mixed vegetable sabzi', '1 katori', [['carrot', 30], ['peas', 30], ['cauliflower', 50], ['potato', 30], ['onion', 20], ['oil', 6]]),
-  // Dairy & sides
-  d('curd', 'Curd / dahi', '1 katori (100 g)', [['curd', 100]]),
-  d('raita', 'Veg raita', '1 katori', [['curd', 100], ['cucumber', 30], ['tomato', 15]]),
-  d('chaas', 'Chaas / buttermilk', '1 glass (200 ml)', [['buttermilk', 200]]),
-  d('milk_glass', 'Milk', '1 glass (200 ml)', [['milk', 200]]),
-  // Snacks & drinks
-  d('chai', 'Masala chai', '1 cup', [['milk', 100], ['sugar', 5]]),
-  d('roasted_chana', 'Roasted chana', '30 g', [['roasted_chana', 30]]),
-  d('makhana', 'Roasted makhana', '30 g', [['makhana', 30], ['ghee', 3]]),
-  d('peanuts', 'Peanuts', 'a handful (25 g)', [['peanuts', 25]]),
-  d('almonds', 'Almonds', '10 pieces (12 g)', [['almonds', 12]]),
-  d('banana', 'Banana', '1 medium', [['banana', 100]]),
-  d('sattu_drink', 'Sattu drink', '1 glass', [['sattu', 30]]),
+export interface Category {
+  id: string;
+  label: string;
+  /** A few examples, shown under the name so the grouping is obvious. */
+  hint: string;
+}
+
+/** Top-level groups people browse by, so the list is never one long scroll. */
+export const CATEGORIES: Category[] = [
+  { id: 'north', label: 'North Indian', hint: 'Dal makhani, paneer, naan, chole' },
+  { id: 'south', label: 'South Indian', hint: 'Idli, dosa, sambar, rasam' },
+  { id: 'west', label: 'Gujarati & Maharashtrian', hint: 'Dhokla, thepla, pav bhaji' },
+  { id: 'east', label: 'Bengali & East Indian', hint: 'Khichuri, luchi, rasgulla' },
+  { id: 'street', label: 'Street food & snacks', hint: 'Samosa, bhel, pakora' },
+  { id: 'breakfast', label: 'Breakfast', hint: 'Poha, upma, paratha, oats' },
+  { id: 'staples', label: 'Rotis, rice & curd', hint: 'Roti, rice, biryani, raita' },
+  { id: 'dals', label: 'Dals & legumes', hint: 'Dal, rajma, chole, sambar' },
+  { id: 'sabzi', label: 'Sabzis & vegetables', hint: 'Bhindi, aloo gobi, avial' },
+  { id: 'paneer', label: 'Paneer, tofu & soy', hint: 'Palak paneer, tofu bhurji' },
+  { id: 'sweets', label: 'Sweets & desserts', hint: 'Gulab jamun, kheer, halwa' },
+  { id: 'fruit', label: 'Fruit & nuts', hint: 'Banana, mango, almonds' },
+  { id: 'beverages', label: 'Beverages', hint: 'Tea, coffee, lassi, juices' },
+  { id: 'ingredients', label: 'Raw ingredients', hint: 'Per 100 g, for your own recipes' },
 ];
+
+/** Groups inside Beverages. */
+export const BEVERAGE_GROUPS: Category[] = [
+  { id: 'tea-coffee', label: 'Tea & coffee', hint: 'Chai, green tea, filter coffee' },
+  { id: 'milk-lassi', label: 'Milk, lassi & shakes', hint: 'Lassi, chaas, haldi doodh' },
+  { id: 'juices-soft', label: 'Juices & cold drinks', hint: 'Nimbu pani, coconut water' },
+];
+
+export const CATEGORY_BY_ID: Record<string, Category> = Object.fromEntries([...CATEGORIES, ...BEVERAGE_GROUPS].map((c) => [c.id, c]));
+
+/** Dishes listed under a category (or beverage group), in the order they were defined. */
+export const dishesIn = (categoryId: string): Dish[] => DISHES.filter((x) => x.tags.includes(categoryId));
 
 export const DISH_BY_ID: Record<string, Dish> = Object.fromEntries(DISHES.map((x) => [x.id, x]));
 
@@ -207,13 +229,4 @@ export function partsNutrition(parts: Part[]): Nutrition {
 
 export function dishNutrition(dish: Dish): Nutrition {
   return partsNutrition(dish.parts);
-}
-
-export function searchFoods(query: string): { dishes: Dish[]; ingredients: Ingredient[] } {
-  const q = query.trim().toLowerCase();
-  if (!q) return { dishes: DISHES, ingredients: INGREDIENTS };
-  return {
-    dishes: DISHES.filter((x) => x.name.toLowerCase().includes(q)),
-    ingredients: INGREDIENTS.filter((x) => x.name.toLowerCase().includes(q)),
-  };
 }

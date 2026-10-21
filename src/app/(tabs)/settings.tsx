@@ -6,6 +6,7 @@ import { confirmAction, notify } from '../../lib/dialogs';
 import { Text } from '../../components/Text';
 import { AccountCard } from '../../components/AccountCard';
 import { useAccount } from '../../components/AccountProvider';
+import { MESSAGE } from '../../lib/storageMode';
 import { useSteps } from '../../components/StepsProvider';
 import { colors } from '../../components/theme';
 import { Button, Card, H1, H2, Muted, Row } from '../../components/ui';
@@ -82,9 +83,9 @@ export default function SettingsScreen() {
           Calories burned are estimates: walking is worked out from steps, your height (stride length) and your weight; resting burn uses the
           Mifflin-St Jeor formula.
           {'\n\n'}
-          {account.status === 'signed-in'
-            ? 'You are signed in, so your food log, weights, recipes, profile and plans are also stored on your account. Steps, workouts and connected-app sign-ins stay on this device.'
-            : 'Your data is stored only on this phone, in a local database. Nothing is uploaded unless you sign in to an account above.'}
+          {account.protection === 'synced'
+            ? 'Your food log, weights, recipes, profile and plans are stored on your account as well as on this device. Steps, workouts and connected-app sign-ins stay on this device.'
+            : `${MESSAGE[account.protection].long} Nothing is uploaded unless you choose a cloud account and sign in.`}
           {' '}Other network requests: the optional barcode lookup sends the barcode number to Open Food Facts, and connected apps talk to their own services.
         </Muted>
       </Card>

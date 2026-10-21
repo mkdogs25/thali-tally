@@ -3,6 +3,7 @@ import type { MealType, Nutrition, Part } from './foods';
 import type { SourceId, Workout } from './health/types';
 import type { Favourite } from './favourites';
 import type { Plan, Profile } from './plan';
+import type { StorageMode } from './storageMode';
 import type { WorkoutPlan } from './workout';
 
 export const DB_NAME = 'thali-tally.db';
@@ -142,6 +143,9 @@ async function setJson(db: SQLiteDatabase, key: string, value: unknown): Promise
 export const getProfile = (db: SQLiteDatabase) => getJson<Profile>(db, 'profile');
 export const saveProfile = (db: SQLiteDatabase, p: Profile) => setJson(db, 'profile', p);
 export const getPlan = (db: SQLiteDatabase) => getJson<Plan>(db, 'plan');
+/** Where the person chose to keep their data. Per device, so it is never synced. */
+export const getStorageMode = (db: SQLiteDatabase) => getJson<StorageMode>(db, 'storage_mode');
+export const saveStorageMode = (db: SQLiteDatabase, m: StorageMode) => setJson(db, 'storage_mode', m);
 export const getFavourites = async (db: SQLiteDatabase): Promise<Favourite[]> => (await getJson<Favourite[]>(db, 'favourites')) ?? [];
 export const saveFavourites = (db: SQLiteDatabase, f: Favourite[]) => setJson(db, 'favourites', f);
 export const getWorkoutPlan = (db: SQLiteDatabase) => getJson<WorkoutPlan>(db, 'workout_plan');

@@ -6,6 +6,7 @@ import { confirmAction } from '../../lib/dialogs';
 import { Text } from '../../components/Text';
 import { useState } from 'react';
 import { useAccount } from '../../components/AccountProvider';
+import { StorageNotice } from '../../components/StorageNotice';
 import { useSteps } from '../../components/StepsProvider';
 import { colors, MEAL_ICON } from '../../components/theme';
 import { Button, Card, H2, Muted, n0, n1, ProgressBar, Row } from '../../components/ui';
@@ -89,6 +90,7 @@ export default function TodayScreen() {
       }
     >
       <Muted>{formatDay(today)}</Muted>
+      <StorageNotice />
 
       {!data.plan || !data.profile ? (
         <Card style={{ backgroundColor: colors.soft }}>

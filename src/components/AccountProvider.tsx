@@ -2,7 +2,8 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { useSQLiteContext } from 'expo-sqlite';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { subscribeLocalChanges } from '../lib/db';
+import { getStorageMode, saveStorageMode, subscribeLocalChanges } from '../lib/db';
+import { needsChoice, protection, Protection, StorageMode } from '../lib/storageMode';
 import { checkOwner, syncAll, takeOverPhone } from '../lib/sync/engine';
 import { createAccountClient, friendlyError, syncConfigured } from '../lib/sync/client';
 import { supabaseRemote } from '../lib/sync/supabaseRemote';
@@ -27,6 +28,16 @@ interface AccountContext {
   syncNow: () => Promise<void>;
   /** Resolve the conflict: replace this phone's data with the signed-in account's, or sign back out. */
   resolveConflict: (takeOver: boolean) => Promise<void>;
+  /** What the person chose: this device only, or a cloud account. Null until they choose. */
+  mode: StorageMode | null;
+  /** False until the saved choice has been read, so screens do not flash the first-run question. */
+  modeLoaded: boolean;
+  /** How safe the data is right now, for deciding what to tell the person. */
+  protection: Protection;
+  /** True on first run when there is a real choice to make. */
+  needsChoice: boolean;
+  /** Choose where data lives. Choosing this device only signs out of any account (the account keeps its copy). */
+  chooseMode: (mode: StorageMode) => Promise<void>;
 }
 
 const none: AccountContext = {
@@ -43,6 +54,11 @@ const none: AccountContext = {
   signOut: async () => {},
   syncNow: async () => {},
   resolveConflict: async () => {},
+  mode: null,
+  modeLoaded: true,
+  protection: 'unavailable',
+  needsChoice: false,
+  chooseMode: async () => {},
 };
 
 const Ctx = createContext<AccountContext>(none);
@@ -65,7 +81,22 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [version, setVersion] = useState(0);
+  const [mode, setMode] = useState<StorageMode | null>(null);
+  const [modeLoaded, setModeLoaded] = useState(!client);
 
+  const modeRef = useRef<StorageMode | null>(null);
+  // Read the saved choice once; sign-in handling waits for it so it never overrides a choice of "this device only".
+  const modeReady = useMemo(
+    () =>
+      client
+        ? getStorageMode(db).then((m) => {
+            modeRef.current = m;
+            setMode(m);
+            setModeLoaded(true);
+          })
+        : Promise.resolve(),
+    [client, db],
+  );
   const session = useRef<Session | null>(null);
   const busy = useRef(false);
   const blocked = useRef(false);
@@ -73,7 +104,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const runSync = useCallback(async () => {
     const s = session.current;
-    if (!client || !s || busy.current || blocked.current) return;
+    if (!client || !s || busy.current || blocked.current || modeRef.current !== 'cloud') return;
     busy.current = true;
     setSyncing(true);
     try {
@@ -91,6 +122,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const begin = useCallback(
     async (s: Session) => {
+      await modeReady;
+      if (modeRef.current === 'local') {
+        // They chose this device only, so a lingering session must not start uploading.
+        await client?.auth.signOut();
+        return;
+      }
+      // Signing in is itself the choice to use a cloud account (also covers sessions from before the choice existed).
+      if (modeRef.current !== 'cloud') {
+        await saveStorageMode(db, 'cloud');
+        modeRef.current = 'cloud';
+        setMode('cloud');
+      }
       session.current = s;
       setEmail(s.user.email ?? null);
       setStatus('signed-in');
@@ -104,7 +147,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setConflict(false);
       await runSync();
     },
-    [db, runSync],
+    [client, db, modeReady, runSync],
   );
 
   // Restore a saved session and follow sign-in / sign-out.
@@ -197,10 +240,46 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     [client, db, runSync],
   );
 
-  const value = useMemo<AccountContext>(
-    () => ({ configured: Boolean(client), status, email, syncing, lastSync, error, conflict, version, signIn, signUp, signOut, syncNow: runSync, resolveConflict }),
-    [client, status, email, syncing, lastSync, error, conflict, version, signIn, signUp, signOut, runSync, resolveConflict],
+  const chooseMode = useCallback(
+    async (next: StorageMode) => {
+      await saveStorageMode(db, next);
+      modeRef.current = next;
+      setMode(next);
+      if (next === 'local') {
+        // Stop uploading at once. The account keeps whatever it already has.
+        blocked.current = false;
+        setConflict(false);
+        await client?.auth.signOut();
+      } else if (session.current) {
+        void runSync();
+      }
+    },
+    [client, db, runSync],
   );
+
+  const value = useMemo<AccountContext>(() => {
+    const state = { mode, configured: Boolean(client), signedIn: status === 'signed-in' };
+    return {
+      configured: state.configured,
+      status,
+      email,
+      syncing,
+      lastSync,
+      error,
+      conflict,
+      version,
+      signIn,
+      signUp,
+      signOut,
+      syncNow: runSync,
+      resolveConflict,
+      mode,
+      modeLoaded,
+      protection: protection(state),
+      needsChoice: modeLoaded && needsChoice(state),
+      chooseMode,
+    };
+  }, [client, mode, modeLoaded, status, email, syncing, lastSync, error, conflict, version, signIn, signUp, signOut, runSync, resolveConflict, chooseMode]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

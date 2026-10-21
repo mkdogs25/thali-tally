@@ -4,13 +4,14 @@ A vegetarian Indian calorie, protein and step tracker. Everything is stored on t
 
 ## What it does
 
-- **Log food** four ways: search Indian dishes/ingredients, build a home recipe from raw ingredient weights,
+- **Log food** four ways: browse or search Indian dishes/ingredients, build a home recipe from raw ingredient weights,
   photograph the meal and pick the dish, or scan a packaged-food barcode. Quick add for anything else.
+- **Food categories**: about 175 dishes and drinks are grouped under tiles (North Indian, South Indian, Gujarati & Maharashtrian, Bengali & East Indian, street food, breakfast, rotis and rice, dals, paneer & soy, sabzis, sweets, fruit & nuts, and Beverages with tea & coffee, milk & lassi, and juices & cold drinks) so there is no long list to scroll. Search still works across everything, including common alternative names (chai, dahi, bhindi...).
 - **Steps and calories burned** read natively from the phone, or from connected health apps (see below).
 - **Connected apps**: Apple Health, Health Connect (Android) and Strava, which together bring in smartwatches and fitness apps.
 - **Regular foods**: tell the app what you actually eat or cook (built-in dishes or your own saved recipes) and which meals they are for; the sample day of meals is built from them.
 - **Workout plan**: say which activities you like (strength, walking, running, cycling, swimming, yoga, interval circuits), how many days, how long, what equipment you have and your experience, and it builds a week with exercises, sets and reps, step targets and calorie estimates. Today's session shows on the Today screen.
-- **Optional account** with cloud sync between your phone and the web (see *Cloud sync* below).
+- **Where your data lives is your choice**: *this device only* or a *cloud account* (optional, switch any time). Local-only is clearly labelled as not guaranteed to be kept. See *Cloud sync* below.
 - **Diet plan**: enter age, height, weight, activity, a goal (lose / maintain / gain), target weight and a
   time period. The app works out daily calories and protein, caps the pace at a safe rate (≤1 % of body
   weight or 1 kg per week for loss, 0.5 kg for gain, never below 1200 kcal women / 1500 kcal men) and tells
@@ -59,7 +60,9 @@ and says so on screen.
 
 ## Cloud sync (optional account)
 
-Without an account the app is completely local. With one, your food log, weights, recipes, profile, diet plan, regular
+You choose where your data lives, on first launch and later in Settings. **This device only** never contacts a server, but the app says plainly that the data is not guaranteed to be kept: clearing the browser's site data, uninstalling the app, or losing or resetting the phone deletes it for good. Signing in is always optional. If you pick **Cloud account** and have not signed in yet, the app says your data is still only on this device. Switching back to local while signed in asks first and signs you out; the account keeps its copy.
+
+With a cloud account, your food log, weights, recipes, profile, diet plan, regular
 foods and workout plan are mirrored to a server and kept in step across your phone and the web. Steps, workouts, calories
 burned and connected-app sign-ins always stay on each device.
 
@@ -130,7 +133,7 @@ Notes:
   with `404.html`, which is what makes refreshes and shared deep links work. The browser console shows a 404 on those
   loads; that is expected.
 - Data lives in the browser's own storage (SQLite compiled to WebAssembly), so it stays on each device and browser
-  and is lost if site data is cleared, unless you sign in to an account to sync it.
+  and is lost if site data is cleared, unless you choose a cloud account to sync it.
 - Steps, Apple Health, Health Connect and Strava are phone-app features and are not available on the web.
 - The downloadable web release zip is the same app built for a site root instead.
 

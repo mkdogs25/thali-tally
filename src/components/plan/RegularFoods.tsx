@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { addFavourite, Favourite, removeFavourite, resolveFavourite, toggleMeal, dishFavourite, recipeFavourite } from '../../lib/favourites';
+import { BrowseItem } from '../../lib/browse';
 import type { SavedRecipe } from '../../lib/db';
+import { addFavourite, dishFavourite, Favourite, recipeFavourite, removeFavourite, resolveFavourite, toggleMeal } from '../../lib/favourites';
 import { DISHES, dishNutrition, MEAL_LABEL, MEAL_TYPES, partsNutrition, scale } from '../../lib/foods';
-import { Text, TextInput } from '../Text';
+import { FoodBrowser, MY_RECIPES } from '../FoodBrowser';
+import { Text } from '../Text';
 import { colors } from '../theme';
 import { Card, Chip, H2, Muted, n0, n1, Row, Wrap } from '../ui';
 
@@ -13,25 +15,32 @@ import { Card, Chip, H2, Muted, n0, n1, Row, Wrap } from '../ui';
  */
 export function RegularFoods({ favourites, recipes, onChange }: { favourites: Favourite[]; recipes: SavedRecipe[]; onChange: (next: Favourite[]) => void }) {
   const [adding, setAdding] = useState(false);
-  const [query, setQuery] = useState('');
 
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  // Everything not already on the list, browsable by category like the Add food screen.
+  const items = useMemo<BrowseItem<string>[]>(() => {
     const have = new Set(favourites.map((f) => f.id));
     const mine = recipes
-      .filter((r) => !have.has(recipeFavourite(r.uid)) && (!q || r.name.toLowerCase().includes(q)))
-      .map((r) => ({ id: recipeFavourite(r.uid), name: r.name, sub: 'My recipe', kcal: scale(partsNutrition(r.parts), 1 / r.servings).kcal }));
-    const dishes = DISHES.filter((d) => !have.has(dishFavourite(d.id)) && (!q || d.name.toLowerCase().includes(q)))
-      .map((d) => ({ id: dishFavourite(d.id), name: d.name, sub: d.serving, kcal: dishNutrition(d).kcal }));
-    return [...mine, ...dishes].slice(0, 10);
-  }, [query, favourites, recipes]);
+      .filter((r) => !have.has(recipeFavourite(r.uid)))
+      .map((r) => ({ key: `r-${r.uid}`, name: r.name, sub: 'My recipe, per serving', kcal: scale(partsNutrition(r.parts), 1 / r.servings).kcal, protein: scale(partsNutrition(r.parts), 1 / r.servings).protein, tags: [MY_RECIPES.id], value: recipeFavourite(r.uid) }));
+    const dishes = DISHES.filter((d) => !have.has(dishFavourite(d.id))).map((d) => ({
+      key: d.id,
+      name: d.name,
+      sub: d.serving,
+      kcal: dishNutrition(d).kcal,
+      protein: dishNutrition(d).protein,
+      tags: d.tags,
+      keywords: d.keywords,
+      value: dishFavourite(d.id),
+    }));
+    return [...mine, ...dishes];
+  }, [favourites, recipes]);
 
   return (
     <Card>
       <H2>My regular foods</H2>
       <Muted style={{ marginBottom: 10 }}>
-        Add what you actually eat or cook. Pick the meals each one is for, and the day of meals below is built from them. Meals with nothing assigned use
-        a general menu.
+        Add what you actually eat or cook, including your usual tea or coffee. Pick the meals each one is for, and the day of meals below is built from
+        them. Meals with nothing assigned use a general menu.
       </Muted>
 
       {favourites.length === 0 ? <Muted style={{ marginBottom: 10 }}>Nothing added yet.</Muted> : null}
@@ -70,41 +79,11 @@ export function RegularFoods({ favourites, recipes, onChange }: { favourites: Fa
 
       {adding ? (
         <View style={{ marginTop: 12 }}>
-          <TextInput
-            autoFocus
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search dal, poha, paneer… or your recipes"
-            placeholderTextColor={colors.muted}
-            autoCorrect={false}
-            style={{ borderWidth: 1, borderColor: colors.accent, borderRadius: 10, backgroundColor: colors.inputBg, padding: 10, fontSize: 16, color: colors.text }}
-          />
-          {matches.map((m) => (
-            <Pressable
-              key={m.id}
-              onPress={() => {
-                onChange(addFavourite(favourites, m.id));
-                setQuery('');
-              }}
-              style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.line }}
-            >
-              <Row style={{ justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={{ color: colors.text, fontWeight: '700' }}>{m.name}</Text>
-                  <Muted>{m.sub}</Muted>
-                </View>
-                <Text style={{ color: colors.muted }}>{n0(m.kcal)} kcal</Text>
-              </Row>
-            </Pressable>
-          ))}
-          {matches.length === 0 ? (
-            <Muted style={{ marginTop: 8 }}>
-              No match. For anything not in the list, build it once under Today › Add food › Recipe and tap “Save recipe for later”; it will show up here.
-            </Muted>
-          ) : null}
-          <View style={{ marginTop: 10 }}>
-            <Chip label="Done" onPress={() => { setAdding(false); setQuery(''); }} />
-          </View>
+          <FoodBrowser items={items} onSelect={(item) => onChange(addFavourite(favourites, item.value))} />
+          <Muted style={{ marginTop: 10, marginBottom: 8 }}>
+            Not in the list? Build it once under Today › Add food › Recipe and tap “Save recipe for later”; it will appear under My recipes here.
+          </Muted>
+          <Chip label="Done" onPress={() => setAdding(false)} />
         </View>
       ) : (
         <View style={{ marginTop: 12 }}>
