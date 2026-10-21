@@ -14,9 +14,11 @@ on:
 permissions:
   contents: write # create releases and tags
 
+# Native builds take 10+ minutes. A newer push waits its turn rather than cancelling a build part-way,
+# which is what left the Android and iPhone releases missing.
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   CI: '1'
